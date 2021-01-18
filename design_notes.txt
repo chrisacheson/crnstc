@@ -21,12 +21,12 @@ D&D/d20 style
 ToHit - ArmorClass + d20, if result is >= 20 attack hits
 Roll weapon's damage dice and add character's strength to determine damage
 Angband and Nethack use this
-Simple, but lacks detail and realism. No degrees of success. Damaged doesn't
+Simple, but lacks detail and realism. No degrees of success. Damage doesn't
 impose penalties (until it kills you). Combat tends to be drawn out, which may
 be more desirable for a roguelike because of permanent death.
 
 Shadowrun/White Wolf style
-Attacker a number of d6s or d10s equal to their skill. Dice that meet the
+Attacker rolls a number of d6s or d10s equal to their skill. Dice that meet the
 target number (representing attack difficulty) are successes. Defender rolls
 combat pool dice to dodge, but attacker can also use combat pool. One or more
 net successes is a hit, and damage scales up based on net total number of
