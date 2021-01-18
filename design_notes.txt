@@ -1,13 +1,18 @@
 Feel free to edit and reformat these as you see fit:
 
 
-Core gameplay focus will be on combat, hacking, and infiltration. Vehicles/drones and minor survival game elements will be a secondary priority.
+Core gameplay focus will be on combat, hacking, and infiltration.
+Vehicles/drones and minor survival game elements will be a secondary priority.
 
 Two options for setting:
 Fictional/unnamed city on Earth
 Mars colony
 
-Tech level will include cybernetic enhancements, genetic engineering, and primitive nanotech. Space exploration is in its early stages. Full-dive VR exists, but "sleeve"/consciousness transfer technology does not. More advanced tech may exist, but is generally unknown to the public and unavailable to the player.
+Tech level will include cybernetic enhancements, genetic engineering, and
+primitive nanotech. Space exploration is in its early stages. Full-dive VR
+exists, but "sleeve"/consciousness transfer technology does not. More advanced
+tech may exist, but is generally unknown to the public and unavailable to the
+player.
 
 
 Combat system options:
@@ -16,15 +21,31 @@ D&D/d20 style
 ToHit - ArmorClass + d20, if result is >= 20 attack hits
 Roll weapon's damage dice and add character's strength to determine damage
 Angband and Nethack use this
-Simple, but lacks detail and realism. No degrees of success. Damaged doesn't impose penalties (until it kills you). Combat tends to be drawn out, which may be more desirable for a roguelike because of permanent death.
+Simple, but lacks detail and realism. No degrees of success. Damaged doesn't
+impose penalties (until it kills you). Combat tends to be drawn out, which may
+be more desirable for a roguelike because of permanent death.
 
 Shadowrun/White Wolf style
-Attacker a number of d6s or d10s equal to their skill. Dice that meet the target number (representing attack difficulty) are successes. Defender rolls combat pool dice to dodge, but attacker can also use combat pool. One or more net successes is a hit, and damage scales up based on net total number of successes. Defender rolls body dice to reduce damage, with target number based on weapon power vs armor rating. Damage imposes penalties to subsequent actions.
-More realistic, but possibly too deadly for a roguelike due to permanent death and lack of allies to save you when you go down. Could change damage scaling to compensate. Needing to make choices about combat pool also doesn't work very well for a roguelike.
+Attacker a number of d6s or d10s equal to their skill. Dice that meet the
+target number (representing attack difficulty) are successes. Defender rolls
+combat pool dice to dodge, but attacker can also use combat pool. One or more
+net successes is a hit, and damage scales up based on net total number of
+successes. Defender rolls body dice to reduce damage, with target number based
+on weapon power vs armor rating. Damage imposes penalties to subsequent
+actions.
+More realistic, but possibly too deadly for a roguelike due to permanent death
+and lack of allies to save you when you go down. Could change damage scaling to
+compensate. Needing to make choices about combat pool also doesn't work very
+well for a roguelike.
 
 Gemstone 3/Rolemaster Style
 AttackStrengh - DefenseStrength + Modifier + d100, if result is > 100 attack hits
-Look up result on table based on weapon type vs armor type. Higher results will cause more HP damage and will also cause criticals, specific wounds that cause extra damage and additional effects. Fights are usually ended by landing a solid critical or two, rather than just simple HP loss.
-Also realistic and deadly. Specific wounds on specific body parts may work well with the setting, since severed/mangled limbs will necessitate cybernetic replacement.
+Look up result on table based on weapon type vs armor type. Higher results will
+cause more HP damage and will also cause criticals, specific wounds that cause
+extra damage and additional effects. Fights are usually ended by landing a
+solid critical or two, rather than just simple HP loss.
+Also realistic and deadly. Specific wounds on specific body parts may work well
+with the setting, since severed/mangled limbs will necessitate cybernetic
+replacement.
 
 Other options?
