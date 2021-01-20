@@ -49,3 +49,41 @@ with the setting, since severed/mangled limbs will necessitate cybernetic
 replacement.
 
 Other options?
+
+
+Features wishlist:
+
+Crafting - maybe not as extensive as other games, but should be able to build
+your own computers/vehicles/etc and scavenge discarded junk for useful parts
+
+Factions that interact with each other, vie for territory/wealth/power, and can
+be influenced by player actions
+
+Generate game world from real-world GIS data, then build on it procedurally
+from there
+
+
+Possible historical timeline elements:
+
+Second coup attempt in the US in/around 2028, this time technically successful.
+There's significant resistance from portions of the military and (non LE)
+federal agencies. Massive street protests and partisan violence. With the
+federal government mostly paralyzed, deep blue states secede, joined by some
+(parts of?) light blue states. (Could determine this procedurally, using 2020
+per-county voting data.)
+Look into the scenarios that the "Transition Integrity Project" gamed out for
+more material here:
+https://www.bostonglobe.com/2020/07/25/nation/bipartisan-group-secretly-gathered-game-out-contested-trump-biden-election-it-wasnt-pretty/
+(Side note, I want to know more about this RPG that they were using)
+Once the dust settles, secessionist states form 2(?) blocs, one for the east
+coast and one for the west coast, allied with each other. Significant tensions
+on borders, but actual military conflict is minimal. Instead, red and blue try
+to undermine each other through clandestine support of "freedom fighters" in
+each territory.
+Blue state blocs are primarily neoliberal. The corporations run the government,
+in typical cyberpunk fashion.
+Red state US ends up with a fascistic, theocratic character. The government
+"partners with" (controls) specific favored corporations.
+What's going on in the rest of the world? Who does each side ally with?
+Alliances are another thing that could be procedurally determined, possibly
+through the faction system.
