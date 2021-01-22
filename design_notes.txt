@@ -99,3 +99,11 @@ https://en.wikipedia.org/wiki/Maeslantkering
 https://en.wikipedia.org/wiki/Levee
 https://en.wikipedia.org/wiki/List_of_places_on_land_with_elevations_below_sea_level
 https://en.wikipedia.org/wiki/Seasteading
+
+
+Misc notes:
+
+TV Tropes has a "Real Life" section in the examples for each trope, which
+should be pretty useful. Apparently infiltration via air ducts is actually a
+thing, but it tends to be a lot more difficult than in movies and such:
+https://tvtropes.org/pmwiki/pmwiki.php/Main/AirVentPassageway
