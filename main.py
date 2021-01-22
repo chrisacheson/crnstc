@@ -3,14 +3,16 @@ import tcod
 
 from engine import Engine
 from entity import Entity
+from game_map import GameMap
 from input_handlers import EventHandler
+from colors import Colors
 
 
 def main() -> None:
-    screen_width = 32
-    screen_height = 32
-    white = (255, 255, 255)
-    yellow = (255, 255, 0)
+    screen_width = 80
+    screen_height = 50
+    map_width = 80
+    map_height = 45
 
     tileset = tcod.tileset.load_tilesheet(path="16x16-sb-ascii.png",
                                           columns=16, rows=16,
@@ -19,13 +21,14 @@ def main() -> None:
     event_handler = EventHandler()
 
     player = Entity(x=screen_width // 2, y=screen_height // 2, char="@",
-                    color=white)
+                    color=Colors.white)
     npc = Entity(x=screen_width // 2 - 5, y=screen_height // 2, char="@",
-                 color=yellow)
+                 color=Colors.yellow)
     entities = [npc, player]
+    game_map = GameMap(map_width, map_height)
 
     engine = Engine(entities=entities, event_handler=event_handler,
-                    player=player)
+                    game_map=game_map, player=player)
 
     with tcod.context.new(
         columns=console.width,
