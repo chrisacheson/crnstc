@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+
+from typing import Optional, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
@@ -7,13 +8,22 @@ if TYPE_CHECKING:
     from entity import Entity
 
 
+@dataclass
 class Action:
-    def perform(self, engine: Engine, entity: Entity) -> None:
+    entity: Entity
+
+    @property
+    def engine(self) -> Engine:
+        game_map = self.entity.game_map
+        assert game_map is not None
+        return game_map.engine
+
+    def perform(self) -> None:
         raise NotImplementedError()
 
 
 class QuitGameAction(Action):
-    def perform(self, engine: Engine, entity: Entity) -> None:
+    def perform(self) -> None:
         raise SystemExit()
 
 
@@ -22,16 +32,19 @@ class ActionWithDirection(Action):
     dx: int
     dy: int
 
-    def perform(self, engine: Engine, entity: Entity) -> None:
-        raise NotImplementedError()
+    @property
+    def dest_xy(self) -> Tuple[int, int]:
+        return self.entity.x + self.dx, self.entity.y + self.dy
+
+    @property
+    def blocking_entity(self) -> Optional[Entity]:
+        return self.engine.game_map.get_blocker(*self.dest_xy)
 
 
 class MeleeAction(ActionWithDirection):
-    def perform(self, engine: Engine, entity: Entity) -> None:
-        dest_x = entity.x + self.dx
-        dest_y = entity.y + self.dy
-        target = engine.game_map.get_blocking_entity_at_location(x=dest_x,
-                                                                 y=dest_y)
+    def perform(self) -> None:
+        target = self.blocking_entity
+
         if not target:
             return
 
@@ -39,31 +52,26 @@ class MeleeAction(ActionWithDirection):
 
 
 class MovementAction(ActionWithDirection):
-    def perform(self, engine: Engine, entity: Entity) -> None:
-        dest_x = entity.x + self.dx
-        dest_y = entity.y + self.dy
+    def perform(self) -> None:
+        dest_x, dest_y = self.dest_xy
 
-        if not engine.game_map.in_bounds(x=dest_x, y=dest_y):
+        if not self.engine.game_map.in_bounds(x=dest_x, y=dest_y):
             return
 
-        if not engine.game_map.tiles["walkable"][dest_x, dest_y]:
+        if not self.engine.game_map.tiles["walkable"][dest_x, dest_y]:
             return
 
-        if engine.game_map.get_blocking_entity_at_location(x=dest_x, y=dest_y):
+        if self.engine.game_map.get_blocker(x=dest_x, y=dest_y):
             return
 
-        entity.move(self.dx, self.dy)
+        self.entity.move(dx=self.dx, dy=self.dy)
 
 
 class BumpAction(ActionWithDirection):
-    def perform(self, engine: Engine, entity: Entity) -> None:
-        dest_x = entity.x + self.dx
-        dest_y = entity.y + self.dy
-        action: ActionWithDirection
-
-        if engine.game_map.get_blocking_entity_at_location(x=dest_x, y=dest_y):
-            action = MeleeAction(dx=self.dx, dy=self.dy)
+    def perform(self) -> None:
+        if self.blocking_entity:
+            return MeleeAction(entity=self.entity,
+                               dx=self.dx, dy=self.dy).perform()
         else:
-            action = MovementAction(dx=self.dx, dy=self.dy)
-
-        return action.perform(engine=engine, entity=entity)
+            return MovementAction(entity=self.entity,
+                                  dx=self.dx, dy=self.dy).perform()

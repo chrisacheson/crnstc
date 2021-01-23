@@ -1,28 +1,36 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional, TYPE_CHECKING
+from typing import Set, Iterable, Optional, TYPE_CHECKING
+from dataclasses import dataclass, field, InitVar
 
-import numpy as np
+import numpy as np  # type: ignore
 from tcod.console import Console
 
 import tile_types
 
 if TYPE_CHECKING:
+    from engine import Engine
     from entity import Entity
 
 
+@dataclass
 class GameMap:
-    def __init__(self, width: int, height: int,
-                 entities: Iterable[Entity] = ()):
-        self.width, self.height = width, height
-        self.entities = set(entities)
-        self.tiles = np.full((width, height), fill_value=tile_types.wall,
-                             order="F")
-        self.visible = np.full((width, height), fill_value=False, order="F")
-        self.explored = np.full((width, height), fill_value=False, order="F")
+    engine: Engine
+    width: int
+    height: int
+    entities: Set[Entity] = field(init=False)
+    entities_: InitVar[Iterable[Entity]]
 
-    def get_blocking_entity_at_location(self,
-                                        x: int, y: int) -> Optional[Entity]:
+    def __post_init__(self, entities_):
+        self.entities = set(entities_)
+        self.tiles = np.full((self.width, self.height),
+                             fill_value=tile_types.wall, order="F")
+        self.visible = np.full((self.width, self.height),
+                               fill_value=False, order="F")
+        self.explored = np.full((self.width, self.height),
+                                fill_value=False, order="F")
+
+    def get_blocker(self, x: int, y: int) -> Optional[Entity]:
         for entity in self.entities:
             if entity.blocks_movement and entity.x == x and entity.y == y:
                 return entity
@@ -36,7 +44,7 @@ class GameMap:
         console.tiles_rgb[0:self.width, 0:self.height] = np.select(
             condlist=[self.visible, self.explored],
             choicelist=[self.tiles["light"], self.tiles["dark"]],
-            default=tile_types.shroud
+            default=tile_types.shroud,
         )
 
         for entity in self.entities:
