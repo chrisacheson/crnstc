@@ -6,3 +6,5 @@ class Colors:
     black = (0, 0, 0)
     gold = (200, 180, 50)
     bronze = (130, 110, 50)
+    blue = (0, 0, 255)
+    green = (0, 170, 0)

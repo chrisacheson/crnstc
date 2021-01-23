@@ -1,4 +1,4 @@
-from typing import List, Iterable, Any
+from typing import Iterable, Any
 from dataclasses import dataclass
 
 from tcod.context import Context
@@ -12,13 +12,17 @@ from input_handlers import EventHandler
 
 @dataclass
 class Engine:
-    entities: List[Entity]
     event_handler: EventHandler
     game_map: GameMap
     player: Entity
 
     def __post_init__(self):
         self.update_fov()
+
+    def handle_enemy_turns(self) -> None:
+        for entity in self.game_map.entities - {self.player}:
+            print(f"The {entity.name} wonders when it"
+                  " will get to take a real turn.")
 
     def handle_events(self, events: Iterable[Any]) -> None:
         for event in events:
@@ -28,6 +32,7 @@ class Engine:
                 continue
 
             action.perform(self, self.player)
+            self.handle_enemy_turns()
             self.update_fov()
 
     def update_fov(self) -> None:
@@ -40,11 +45,6 @@ class Engine:
 
     def render(self, console: Console, context: Context) -> None:
         self.game_map.render(console)
-
-        for entity in self.entities:
-            if self.game_map.visible[entity.x, entity.y]:
-                console.print(x=entity.x, y=entity.y, string=entity.char,
-                              fg=entity.color)
 
         context.present(console)
         console.clear()
