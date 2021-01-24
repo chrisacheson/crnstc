@@ -140,3 +140,16 @@ Things don't need to be perfectly to scale, but should be somewhat realistic.
 In Cataclysm:DDA for example, my SUV is 4x7, and roads are sized to match, but
 trees are 1x1, and the difference is kind of jarring.
 https://www.reddit.com/r/roguelikedev/comments/5xqvh3/whats_the_scale_of_your_grid/
+
+Cybernetics will need to be powered. Glucose fuel cells are an option for very
+low power implants, but larger/hungrier ones will require batteries and
+external charging. For someone with a proper residence this wouldn't be an
+issue (and should be handled automatically along with eating), but homeless and
+squatters will need to account for it.
+Figure out the theoretical maximum sustained power output for a normal caloric
+intake. Could use urine glucose level as a proxy for how much power is
+practically available without negatively affecting the body.
+https://www.technologyreview.com/2010/05/18/26929/power-from-glucose/
+https://www.cnet.com/news/human-powered-biofuel-cell-converts-glucose-into-electricity/
+https://singularityhub.com/2010/05/24/new-biofuel-cell-uses-glucose-in-the-body-to-produce-electricity-for-cyborgs/
+https://cen.acs.org/articles/94/web/2016/07/Glucose-fueled-power-source-delivers.html
