@@ -107,3 +107,35 @@ TV Tropes has a "Real Life" section in the examples for each trope, which
 should be pretty useful. Apparently infiltration via air ducts is actually a
 thing, but it tends to be a lot more difficult than in movies and such:
 https://tvtropes.org/pmwiki/pmwiki.php/Main/AirVentPassageway
+
+What real-world dimensions should a game tile represent?
+5 feet by 5 feet? (D&D style)
+1 meter by 1 meter? (Does the world finally standardize on metric?)
+For a working example, my bedroom is about 12' by 13.5'. The important objects
+to represent are a queen-size bed, computer desk/chair/side table, gun cabinet,
+dresser, large shelving unit, and closet.
+Using 5'x5' tiles, with rounding the room would be 2x3, for a total of 6 tiles.
+We'd ignore the chair and side table, each feature would be one tile, and the
+room would be completely filled, leaving no floor space:
+#+##
+#DC#	D: dresser, C: closet
+#gs#	g: gun cabinet, s: shelving unit
+#bd#	b: bed, d: desk
+####
+Using 1mx1m tiles, the room would be 4x4 (3.66mx4.11m):
+#+####
+#D sC#
+#g   #
+#bbcd#	c: chair
+#bb t#	t: side table
+######
+1mx1m would be better for indoor environments, but need to figure out if it'll
+make outdoor distances too large.
+Highway lanes are 12' (3.66m) wide
+Football fields are 360' (110m) long (with end zones)
+My yard is about 60' (18.3m) wide and 156' (47.5m) long
+How far out should field of view extend in clear daylight conditions?
+Need to think about z-levels (elevation) too
+Things don't need to be perfectly to scale, but should be somewhat realistic.
+In Cataclysm:DDA for example, my SUV is 4x7, and roads are sized to match, but
+trees are 1x1, and the difference is kind of jarring.
