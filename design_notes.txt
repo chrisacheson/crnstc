@@ -139,3 +139,4 @@ Need to think about z-levels (elevation) too
 Things don't need to be perfectly to scale, but should be somewhat realistic.
 In Cataclysm:DDA for example, my SUV is 4x7, and roads are sized to match, but
 trees are 1x1, and the difference is kind of jarring.
+https://www.reddit.com/r/roguelikedev/comments/5xqvh3/whats_the_scale_of_your_grid/
