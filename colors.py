@@ -8,3 +8,4 @@ class Colors:
     bronze = (130, 110, 50)
     blue = (0, 0, 255)
     green = (0, 170, 0)
+    red = (191, 0, 0)
