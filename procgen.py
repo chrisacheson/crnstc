@@ -58,8 +58,8 @@ def place_entities(room: RectangularRoom, dungeon: GameMap,
                 entity_factories.corpsec_guard.spawn(game_map=dungeon,
                                                      x=x, y=y)
             else:
-                entity_factories.corpsec_soldier.spawn(game_map=dungeon,
-                                                       x=x, y=y)
+                entity_factories.combat_drone.spawn(game_map=dungeon,
+                                                    x=x, y=y)
 
 
 def tunnel_between(start: Tuple[int, int],

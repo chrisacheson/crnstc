@@ -9,6 +9,6 @@ player = Actor(char="@", color=color.white, name="Player", ai_cls=BaseAI,
 corpsec_guard = Actor(char="p", color=color.blue, name="CorpSec Guard",
                       ai_cls=HostileEnemy,
                       fighter=Fighter(max_hp=10, defense=0, power=3))
-corpsec_soldier = Actor(char="p", color=color.green, name="CorpSec Soldier",
-                        ai_cls=HostileEnemy,
-                        fighter=Fighter(max_hp=16, defense=1, power=4))
+combat_drone = Actor(char="D", color=color.green, name="Combat Drone",
+                     ai_cls=HostileEnemy,
+                     fighter=Fighter(max_hp=16, defense=1, power=4))
