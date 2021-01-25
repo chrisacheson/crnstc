@@ -17,7 +17,7 @@ T = TypeVar("T", bound="Entity")
 
 @dataclass(eq=False)
 class Entity:
-    game_map: Optional[GameMap] = None
+    parent: Optional[GameMap] = None
     x: int = 0
     y: int = 0
     char: str = "?"
@@ -27,14 +27,19 @@ class Entity:
     render_order: RenderOrder = RenderOrder.corpse
 
     def __post_init__(self):
-        if self.game_map:
-            self.game_map.entities.add(self)
+        if self.parent:
+            self.parent.entities.add(self)
+
+    @property
+    def game_map(self) -> GameMap:
+        assert self.parent is not None
+        return self.parent.game_map
 
     def spawn(self: T, game_map: GameMap, x: int, y: int) -> T:
         clone = copy.deepcopy(self)
         clone.x = x
         clone.y = y
-        clone.game_map = game_map
+        clone.parent = game_map
         game_map.entities.add(clone)
         return clone
 
@@ -43,9 +48,9 @@ class Entity:
         self.x, self.y = x, y
 
         if game_map:
-            if self.game_map:
-                self.game_map.entities.remove(self)
-            self.game_map = game_map
+            if self.parent:
+                self.parent.entities.remove(self)
+            self.parent = game_map
             game_map.entities.add(self)
 
     def move(self, dx: int, dy: int) -> None:
@@ -63,7 +68,7 @@ class Actor(Entity):
                          blocks_movement=True, render_order=RenderOrder.actor)
         self.ai: Optional[BaseAI] = ai_cls(self)
         self.fighter = fighter
-        self.fighter.entity = self
+        self.fighter.parent = self
 
     @property
     def is_alive(self) -> bool:

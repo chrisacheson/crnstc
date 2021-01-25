@@ -32,6 +32,10 @@ class GameMap:
                                 fill_value=False, order="F")
 
     @property
+    def game_map(self) -> GameMap:
+        return self
+
+    @property
     def actors(self) -> Iterator[Actor]:
         yield from (entity
                     for entity

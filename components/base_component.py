@@ -6,14 +6,17 @@ from dataclasses import dataclass, field
 if TYPE_CHECKING:
     from engine import Engine
     from entity import Entity
+    from game_map import GameMap
 
 
 @dataclass
 class BaseComponent:
-    entity: Entity = field(init=False)
+    parent: Entity = field(init=False)
+
+    @property
+    def game_map(self) -> GameMap:
+        return self.parent.game_map
 
     @property
     def engine(self) -> Engine:
-        game_map = self.entity.game_map
-        assert game_map is not None
-        return game_map.engine
+        return self.game_map.engine

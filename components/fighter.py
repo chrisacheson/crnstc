@@ -18,7 +18,7 @@ class Fighter(BaseComponent):
     max_hp: int
     defense: int
     power: int
-    entity: Actor = field(init=False)
+    parent: Actor = field(init=False)
 
     def __post_init__(self):
         self._hp = self.max_hp
@@ -31,22 +31,22 @@ class Fighter(BaseComponent):
     def hp(self, value: int) -> None:
         self._hp = clamp(0, value, self.max_hp)
 
-        if self._hp <= 0 and self.entity.ai:
+        if self._hp <= 0 and self.parent.ai:
             self.die()
 
     def die(self) -> None:
-        if self.engine.player is self.entity:
+        if self.engine.player is self.parent:
             death_message = "You died!"
             death_message_color = color.player_die
             self.engine.event_handler = GameOverEventHandler(self.engine)
         else:
-            death_message = f"{self.entity.name} is dead!"
+            death_message = f"{self.parent.name} is dead!"
             death_message_color = color.enemy_die
 
-        self.entity.char = "%"
-        self.entity.color = color.red
-        self.entity.blocks_movement = False
-        self.entity.ai = None
-        self.entity.name = f"remains of {self.entity.name}"
-        self.entity.render_order = RenderOrder.corpse
+        self.parent.char = "%"
+        self.parent.color = color.red
+        self.parent.blocks_movement = False
+        self.parent.ai = None
+        self.parent.name = f"remains of {self.parent.name}"
+        self.parent.render_order = RenderOrder.corpse
         self.engine.message_log.add_message(death_message, death_message_color)
