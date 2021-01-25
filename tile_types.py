@@ -2,7 +2,7 @@ from typing import Tuple
 
 import numpy as np  # type: ignore
 
-from colors import Colors
+import color
 
 
 graphic_dt = np.dtype([("ch", np.int32),
@@ -24,11 +24,11 @@ def new_tile(
     return np.array((walkable, transparent, dark, light), dtype=tile_dt)
 
 
-shroud = np.array((ord(" "), Colors.white, Colors.black), dtype=graphic_dt)
+shroud = np.array((ord(" "), color.white, color.black), dtype=graphic_dt)
 
 floor = new_tile(walkable=True, transparent=True,
-                 dark=(ord(" "), Colors.white, Colors.purple),
-                 light=(ord(" "), Colors.white, Colors.gold))
+                 dark=(ord(" "), color.white, color.purple),
+                 light=(ord(" "), color.white, color.gold))
 wall = new_tile(walkable=False, transparent=False,
-                dark=(ord(" "), Colors.white, Colors.navy_blue),
-                light=(ord(" "), Colors.white, Colors.bronze))
+                dark=(ord(" "), color.white, color.navy_blue),
+                light=(ord(" "), color.white, color.bronze))

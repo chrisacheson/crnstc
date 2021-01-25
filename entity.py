@@ -4,7 +4,7 @@ import copy
 from typing import Optional, Tuple, Type, TypeVar, TYPE_CHECKING
 from dataclasses import dataclass
 
-from colors import Colors
+import color
 from render_order import RenderOrder
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ class Entity:
     x: int = 0
     y: int = 0
     char: str = "?"
-    color: Tuple[int, int, int] = Colors.white
+    color: Tuple[int, int, int] = color.white
     name: str = "<Unnamed>"
     blocks_movement: bool = False
     render_order: RenderOrder = RenderOrder.corpse
@@ -56,7 +56,7 @@ class Entity:
 class Actor(Entity):
     # TODO: Need to refactor this before we can use dataclass on it
     def __init__(self, *, x: int = 0, y: int = 0, char: str = "?",
-                 color: Tuple[int, int, int] = Colors.white,
+                 color: Tuple[int, int, int] = color.white,
                  name: str = "<Unnamed>", ai_cls: Type[BaseAI],
                  fighter: Fighter):
         super().__init__(x=x, y=y, char=char, color=color, name=name,
