@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import copy
+import traceback
 
 import tcod
 
@@ -18,11 +19,13 @@ def main() -> None:
     room_min_size = 6
     max_rooms = 30
     max_enemies_per_room = 2
+    max_items_per_room = 2
 
     tileset = tcod.tileset.load_tilesheet(path="16x16-sb-ascii.png",
                                           columns=16, rows=16,
                                           charmap=tcod.tileset.CHARMAP_CP437)
-    console = tcod.Console(width=screen_width, height=screen_height, order="F")
+    root_console = tcod.Console(width=screen_width, height=screen_height,
+                                order="F")
 
     player = copy.deepcopy(entity_factories.player)
     engine = Engine(player=player)
@@ -33,6 +36,7 @@ def main() -> None:
         map_width=map_width,
         map_height=map_height,
         max_enemies_per_room=max_enemies_per_room,
+        max_items_per_room=max_items_per_room,
         engine=engine,
     )
     engine.update_fov()
@@ -41,17 +45,24 @@ def main() -> None:
                                    " dungeon.", color.welcome_text)
 
     with tcod.context.new(
-        columns=console.width,
-        rows=console.height,
+        columns=root_console.width,
+        rows=root_console.height,
         tileset=tileset,
         title="Cyberpunk Roguelike (Name Subject to Change)",
         renderer=tcod.context.RENDERER_OPENGL2,
     ) as context:
         while True:
-            console.clear()
-            engine.event_handler.on_render(console=console)
-            context.present(console)
-            engine.event_handler.handle_events(context)
+            root_console.clear()
+            engine.event_handler.on_render(console=root_console)
+            context.present(root_console)
+            try:
+                for event in tcod.event.wait():
+                    context.convert_event(event)
+                    engine.event_handler.handle_events(event)
+            except Exception:
+                traceback.print_exc()
+                engine.message_log.add_message(traceback.format_exc(),
+                                               color.error)
 
 
 if __name__ == "__main__":

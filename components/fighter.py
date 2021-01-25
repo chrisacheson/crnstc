@@ -50,3 +50,12 @@ class Fighter(BaseComponent):
         self.parent.name = f"remains of {self.parent.name}"
         self.parent.render_order = RenderOrder.corpse
         self.engine.message_log.add_message(death_message, death_message_color)
+
+    def heal(self, amount: int) -> int:
+        old_hp = self.hp
+        self.hp += amount
+        recovered = self.hp - old_hp
+        return recovered
+
+    def take_damage(self, amount: int) -> None:
+        self.hp -= amount

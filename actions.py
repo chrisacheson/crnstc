@@ -4,10 +4,11 @@ from typing import Optional, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 
 import color
+import exceptions
 
 if TYPE_CHECKING:
     from engine import Engine
-    from entity import Entity, Actor
+    from entity import Entity, Actor, Item
 
 
 @dataclass
@@ -24,9 +25,48 @@ class Action:
         raise NotImplementedError()
 
 
-class QuitGameAction(Action):
+class PickupAction(Action):
     def perform(self) -> None:
-        raise SystemExit()
+        actor_location_x = self.entity.x
+        actor_location_y = self.entity.y
+        inventory = self.entity.inventory
+
+        for item in self.engine.game_map.items:
+            if actor_location_x == item.x and actor_location_y == item.y:
+                if len(inventory.items) >= inventory.capacity:
+                    raise exceptions.Impossible("Your inventory is full.")
+
+                self.engine.game_map.entities.remove(item)
+                item.parent = self.entity.inventory
+                inventory.items.append(item)
+                self.engine.message_log.add_message("You picked up the"
+                                                    f" {item.name}.")
+                return
+
+        raise exceptions.Impossible("There is nothing here to pick up.")
+
+
+@dataclass
+class ItemAction(Action):
+    item: Item
+    target_xy: Optional[Tuple[int, int]] = None
+
+    def __post_init__(self):
+        if not self.target_xy:
+            self.target_xy = self.entity.x, self.entity.y
+
+    @property
+    def target_actor(self) -> Optional[Actor]:
+        assert self.target_xy is not None
+        return self.engine.game_map.get_actor_at(*self.target_xy)
+
+    def perform(self) -> None:
+        self.item.consumable.activate(self)
+
+
+class DropItem(ItemAction):
+    def perform(self) -> None:
+        self.entity.inventory.drop(self.item)
 
 
 class WaitAction(Action):
@@ -57,7 +97,7 @@ class MeleeAction(ActionWithDirection):
         target = self.target_actor
 
         if not target:
-            return
+            raise exceptions.Impossible("Nothing to attack.")
 
         damage = self.entity.fighter.power - target.fighter.defense
         attack_desc = f"{self.entity.name.capitalize()} attacks {target.name}"
@@ -84,13 +124,13 @@ class MovementAction(ActionWithDirection):
         dest_x, dest_y = self.dest_xy
 
         if not self.engine.game_map.in_bounds(x=dest_x, y=dest_y):
-            return
+            raise exceptions.Impossible("That way is blocked.")
 
         if not self.engine.game_map.tiles["walkable"][dest_x, dest_y]:
-            return
+            raise exceptions.Impossible("That way is blocked.")
 
         if self.engine.game_map.get_blocker(x=dest_x, y=dest_y):
-            return
+            raise exceptions.Impossible("That way is blocked.")
 
         self.entity.move(dx=self.dx, dy=self.dy)
 
