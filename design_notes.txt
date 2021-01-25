@@ -153,3 +153,10 @@ https://www.technologyreview.com/2010/05/18/26929/power-from-glucose/
 https://www.cnet.com/news/human-powered-biofuel-cell-converts-glucose-into-electricity/
 https://singularityhub.com/2010/05/24/new-biofuel-cell-uses-glucose-in-the-body-to-produce-electricity-for-cyborgs/
 https://cen.acs.org/articles/94/web/2016/07/Glucose-fueled-power-source-delivers.html
+
+Once we get around to implementing crafting, we may want to go with the
+"knowledge is scarce" approach that Cataclysm:DDA uses. For a lot of things
+it'll be trivial to find build instructions on the internet, but the stuff that
+the player will really be interested in may be harder to come by. Military
+weapon systems, high-grade ECM/ECCM, etc. Would need to raid or hack
+corporate/government facilities to obtain the designs.
