@@ -68,7 +68,11 @@ def place_entities(room: RectangularRoom, dungeon: GameMap,
 
         if not any(entity.x == x and entity.y == y
                    for entity in dungeon.entities):
-            entity_factories.medkit.spawn(game_map=dungeon, x=x, y=y)
+            item_chance = random.random()
+            if item_chance < 0.7:
+                entity_factories.medkit.spawn(game_map=dungeon, x=x, y=y)
+            else:
+                entity_factories.grenade.spawn(game_map=dungeon, x=x, y=y)
 
 
 def tunnel_between(start: Tuple[int, int],

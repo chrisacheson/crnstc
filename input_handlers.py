@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import Callable, Tuple, Optional, TYPE_CHECKING
 from dataclasses import dataclass
 
 import tcod.event
@@ -50,6 +50,11 @@ wait_keys = {
     tcod.event.K_PERIOD,
     tcod.event.K_KP_5,
     tcod.event.K_CLEAR,
+}
+
+confirm_keys = {
+    tcod.event.K_RETURN,
+    tcod.event.K_KP_ENTER,
 }
 
 
@@ -178,6 +183,91 @@ class InventoryDropHandler(InventoryEventHandler):
         return actions.DropItem(self.engine.player, item)
 
 
+@dataclass
+class SelectIndexHandler(AskUserEventHandler):
+    def __post_init__(self):
+        player = self.engine.player
+        self.engine.mouse_location = player.x, player.y
+
+    def on_render(self, console: tcod.Console) -> None:
+        super().on_render(console)
+        x, y = self.engine.mouse_location
+        console.tiles_rgb["bg"][x, y] = color.white
+        console.tiles_rgb["fg"][x, y] = color.black
+
+    def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[Action]:
+        key = event.sym
+
+        if key in move_keys:
+            modifier = 1
+
+            if event.mod & (tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT):
+                modifier *= 5
+
+            if event.mod & (tcod.event.KMOD_LCTRL | tcod.event.KMOD_RCTRL):
+                modifier *= 10
+
+            if event.mod & (tcod.event.KMOD_LALT | tcod.event.KMOD_RALT):
+                modifier *= 20
+
+            x, y = self.engine.mouse_location
+            dx, dy = move_keys[key]
+            x += dx * modifier
+            y += dy * modifier
+            x = clamp(0, x, self.engine.game_map.width - 1)
+            y = clamp(0, y, self.engine.game_map.height - 1)
+            self.engine.mouse_location = x, y
+            return None
+        elif key in confirm_keys:
+            return self.on_index_selected(*self.engine.mouse_location)
+
+        return super().ev_keydown(event)
+
+    def ev_mousebuttondown(
+        self,
+        event: tcod.event.MouseButtonDown,
+    ) -> Optional[Action]:
+        if self.engine.game_map.in_bounds(*event.tile):
+            if event.button == 1:
+                return self.on_index_selected(*event.tile)
+
+        return super().ev_mousebuttondown(event)
+
+    def on_index_selected(self, x: int, y: int) -> Optional[Action]:
+        raise NotImplementedError()
+
+
+class LookHandler(SelectIndexHandler):
+    def on_index_selected(self, x: int, y: int) -> None:
+        self.engine.event_handler = MainGameEventHandler(self.engine)
+
+
+@dataclass
+class RangedAttackHandler(SelectIndexHandler):
+    callback: Callable[[Tuple[int, int]], Optional[Action]]
+
+    def on_index_selected(self, x: int, y: int) -> Optional[Action]:
+        # https://github.com/python/mypy/issues/5485
+        return self.callback((x, y))  # type: ignore
+
+
+@dataclass
+class AreaRangedAttackHandler(RangedAttackHandler):
+    radius: int
+
+    def on_render(self, console: tcod.Console) -> None:
+        super().on_render(console)
+        x, y = self.engine.mouse_location
+        console.draw_frame(
+            x=x - self.radius,
+            y=y - self.radius,
+            width=self.radius * 2 + 1,
+            height=self.radius * 2 + 1,
+            fg=color.red,
+            clear=False,
+        )
+
+
 class MainGameEventHandler(EventHandler):
     def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[Action]:
         action: Optional[Action] = None
@@ -198,6 +288,8 @@ class MainGameEventHandler(EventHandler):
             self.engine.event_handler = InventoryActivateHandler(self.engine)
         elif key == tcod.event.K_d:
             self.engine.event_handler = InventoryDropHandler(self.engine)
+        elif key == tcod.event.K_SLASH:
+            self.engine.event_handler = LookHandler(self.engine)
 
         return action
 

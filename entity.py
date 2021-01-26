@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import math
 from typing import Optional, Tuple, Type, TypeVar, TYPE_CHECKING, Union
 from dataclasses import dataclass
 
@@ -54,6 +55,11 @@ class Entity:
                 self.parent.entities.remove(self)  # type: ignore
             self.parent = game_map
             game_map.entities.add(self)
+
+    def distance(self, x: int, y: int) -> float:
+        dx = x - self.x
+        dy = y - self.y
+        return math.sqrt(dx ** 2 + dy ** 2)
 
     def move(self, dx: int, dy: int) -> None:
         self.x += dx

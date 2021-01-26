@@ -1,5 +1,5 @@
 from components.ai import BaseAI, HostileEnemy
-from components.consumable import HealingConsumable
+from components import consumable
 from components.fighter import Fighter
 from components.inventory import Inventory
 from entity import Actor, Item
@@ -19,4 +19,11 @@ combat_drone = Actor(char="D", color=color.green, name="Combat Drone",
                      inventory=Inventory(capacity=0))
 
 medkit = Item(char="!", color=color.bright_purple, name="Medkit",
-              consumable=HealingConsumable(amount=4))
+              consumable=consumable.HealingConsumable(amount=4))
+grenade = Item(
+    char="*",
+    color=color.green,
+    name="Grenade",
+    consumable=consumable.ExplosiveConsumable(damage=15, max_range=5,
+                                              blast_reduction=5),
+)
