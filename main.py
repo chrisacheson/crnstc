@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
-import copy
 import traceback
 
 import tcod
 
 import color
-from engine import Engine
-import entity_factories
-from procgen import generate_dungeon
+import exceptions
+from input_handlers import BaseEventHandler, EventHandler
+import setup_game
+
+
+def save_game(handler: BaseEventHandler, filename: str) -> None:
+    if isinstance(handler, EventHandler):
+        handler.engine.save_as(filename)
+        print("Game saved.")
 
 
 def main() -> None:
     screen_width = 80
     screen_height = 50
-    map_width = 80
-    map_height = 43
-    room_max_size = 10
-    room_min_size = 6
-    max_rooms = 30
-    max_enemies_per_room = 2
-    max_items_per_room = 2
 
     tileset = tcod.tileset.load_tilesheet(path="16x16-sb-ascii.png",
                                           columns=16, rows=16,
@@ -27,22 +25,7 @@ def main() -> None:
     root_console = tcod.Console(width=screen_width, height=screen_height,
                                 order="F")
 
-    player = copy.deepcopy(entity_factories.player)
-    engine = Engine(player=player)
-    engine.game_map = generate_dungeon(
-        max_rooms=max_rooms,
-        room_min_size=room_min_size,
-        room_max_size=room_max_size,
-        map_width=map_width,
-        map_height=map_height,
-        max_enemies_per_room=max_enemies_per_room,
-        max_items_per_room=max_items_per_room,
-        engine=engine,
-    )
-    engine.update_fov()
-    engine.message_log.add_message("You've broken into a corporate facility"
-                                   " that looks suspiciously like a roguelike"
-                                   " dungeon.", color.welcome_text)
+    handler: BaseEventHandler = setup_game.MainMenu()
 
     with tcod.context.new(
         columns=root_console.width,
@@ -51,18 +34,32 @@ def main() -> None:
         title="Cyberpunk Roguelike (Name Subject to Change)",
         renderer=tcod.context.RENDERER_OPENGL2,
     ) as context:
-        while True:
-            root_console.clear()
-            engine.event_handler.on_render(console=root_console)
-            context.present(root_console)
-            try:
-                for event in tcod.event.wait():
-                    context.convert_event(event)
-                    engine.event_handler.handle_events(event)
-            except Exception:
-                traceback.print_exc()
-                engine.message_log.add_message(traceback.format_exc(),
-                                               color.error)
+        try:
+            while True:
+                root_console.clear()
+                handler.on_render(console=root_console)
+                context.present(root_console)
+
+                try:
+                    for event in tcod.event.wait():
+                        context.convert_event(event)
+                        handler = handler.handle_events(event)
+                except Exception:
+                    traceback.print_exc()
+
+                    if isinstance(handler, EventHandler):
+                        handler.engine.message_log.add_message(
+                            traceback.format_exc(),
+                            color.error,
+                        )
+        except exceptions.QuitWithoutSaving:
+            raise
+        except SystemExit:
+            save_game(handler, "savegame.sav")
+            raise
+        except BaseException:
+            save_game(handler, "savegame.sav")
+            raise
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import lzma
+import pickle
 from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 
@@ -7,7 +9,6 @@ from tcod.console import Console
 from tcod.map import compute_fov
 
 import exceptions
-from input_handlers import EventHandler, MainGameEventHandler
 from message_log import MessageLog
 from render_functions import render_bar, render_names_at_mouse_location
 
@@ -22,7 +23,6 @@ class Engine:
     game_map: GameMap = field(init=False)
 
     def __post_init__(self):
-        self.event_handler: EventHandler = MainGameEventHandler(self)
         self.message_log = MessageLog()
         self.mouse_location = (0, 0)
 
@@ -50,3 +50,9 @@ class Engine:
                    maximum_value=self.player.fighter.max_hp, total_width=20)
         render_names_at_mouse_location(console=console, x=21, y=44,
                                        engine=self)
+
+    def save_as(self, filename: str) -> None:
+        save_data = lzma.compress(pickle.dumps(self))
+
+        with open(filename, "wb") as f:
+            f.write(save_data)

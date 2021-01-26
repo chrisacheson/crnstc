@@ -9,7 +9,7 @@ import color
 import components.inventory
 from components.base_component import BaseComponent
 from exceptions import Impossible
-from input_handlers import AreaRangedAttackHandler
+from input_handlers import ActionOrHandler, AreaRangedAttackHandler
 
 if TYPE_CHECKING:
     from entity import Actor, Item
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class Consumable(BaseComponent):
     parent: Item
 
-    def get_action(self, consumer: Actor) -> Optional[actions.Action]:
+    def get_action(self, consumer: Actor) -> Optional[ActionOrHandler]:
         return actions.ItemAction(consumer, self.parent)
 
     def activate(self, action: actions.ItemAction) -> None:
@@ -60,15 +60,14 @@ class ExplosiveConsumable(Consumable):
     def __post_init__(self):
         self.radius = math.ceil(float(self.damage) / self.blast_reduction) - 1
 
-    def get_action(self, consumer: Actor) -> Optional[actions.Action]:
+    def get_action(self, consumer: Actor) -> AreaRangedAttackHandler:
         self.engine.message_log.add_message("Select a target location.",
                                             color.needs_target)
-        self.engine.event_handler = AreaRangedAttackHandler(
+        return AreaRangedAttackHandler(
             self.engine,
             callback=lambda xy: actions.ItemAction(consumer, self.parent, xy),
             radius=self.radius,
         )
-        return None
 
     def activate(self, action: actions.ItemAction) -> None:
         consumer = action.entity
