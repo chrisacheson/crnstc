@@ -93,8 +93,6 @@ class GameWorld:
     max_rooms: int
     room_min_size: int
     room_max_size: int
-    max_enemies_per_room: int
-    max_items_per_room: int
     current_floor: int = 0
 
     def generate_floor(self) -> None:
@@ -107,7 +105,5 @@ class GameWorld:
             room_max_size=self.room_max_size,
             map_width=self.map_width,
             map_height=self.map_height,
-            max_enemies_per_room=self.max_enemies_per_room,
-            max_items_per_room=self.max_items_per_room,
             engine=self.engine,
         )
