@@ -74,6 +74,18 @@ class WaitAction(Action):
         pass
 
 
+class TakeStairsAction(Action):
+    def perform(self) -> None:
+        down_stairs_location = self.engine.game_map.down_stairs_location
+
+        if (self.entity.x, self.entity.y) == down_stairs_location:
+            self.engine.game_world.generate_floor()
+            self.engine.message_log.add_message(
+                "You proceed further into the facility.",
+                color.descend,
+            )
+
+
 @dataclass
 class ActionWithDirection(Action):
     dx: int

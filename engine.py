@@ -10,17 +10,19 @@ from tcod.map import compute_fov
 
 import exceptions
 from message_log import MessageLog
-from render_functions import render_bar, render_names_at_mouse_location
+from render_functions import (render_bar, render_names_at_mouse_location,
+                              render_dungeon_level)
 
 if TYPE_CHECKING:
     from entity import Actor
-    from game_map import GameMap
+    from game_map import GameMap, GameWorld
 
 
 @dataclass
 class Engine:
     player: Actor
     game_map: GameMap = field(init=False)
+    game_world: GameWorld = field(init=False)
 
     def __post_init__(self):
         self.message_log = MessageLog()
@@ -48,6 +50,9 @@ class Engine:
                                 height=5)
         render_bar(console=console, current_value=self.player.fighter.hp,
                    maximum_value=self.player.fighter.max_hp, total_width=20)
+        render_dungeon_level(console=console,
+                             dungeon_level=self.game_world.current_floor,
+                             location=(0, 47))
         render_names_at_mouse_location(console=console, x=21, y=44,
                                        engine=self)
 

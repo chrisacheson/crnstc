@@ -11,8 +11,8 @@ import tcod
 import color
 from engine import Engine
 import entity_factories
+from game_map import GameWorld
 from input_handlers import BaseEventHandler, MainGameEventHandler, PopupMessage
-from procgen import generate_dungeon
 
 
 background_image = tcod.image.load("beeple_mike_winkelman_dvde.png")[:, :, :3]
@@ -29,7 +29,8 @@ def new_game() -> Engine:
 
     player = copy.deepcopy(entity_factories.player)
     engine = Engine(player=player)
-    engine.game_map = generate_dungeon(
+    engine.game_world = GameWorld(
+        engine=engine,
         max_rooms=max_rooms,
         room_min_size=room_min_size,
         room_max_size=room_max_size,
@@ -37,8 +38,8 @@ def new_game() -> Engine:
         map_height=map_height,
         max_enemies_per_room=max_enemies_per_room,
         max_items_per_room=max_items_per_room,
-        engine=engine,
     )
+    engine.game_world.generate_floor()
     engine.update_fov()
     engine.message_log.add_message("You've broken into a corporate facility"
                                    " that looks suspiciously like a roguelike"

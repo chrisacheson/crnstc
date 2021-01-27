@@ -48,6 +48,7 @@ class Fighter(BaseComponent):
         self.parent.name = f"remains of {self.parent.name}"
         self.parent.render_order = RenderOrder.corpse
         self.engine.message_log.add_message(death_message, death_message_color)
+        self.engine.player.level.add_xp(self.parent.level.xp_given)
 
     def heal(self, amount: int) -> int:
         old_hp = self.hp
