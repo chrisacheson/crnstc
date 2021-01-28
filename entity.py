@@ -11,6 +11,8 @@ from render_order import RenderOrder
 if TYPE_CHECKING:
     from components.ai import BaseAI
     from components.consumable import Consumable
+    from components.equipment import Equipment
+    from components.equippable import Equippable
     from components.fighter import Fighter
     from components.inventory import Inventory
     from components.level import Level
@@ -69,13 +71,25 @@ class Entity:
 
 class Actor(Entity):
     # TODO: Need to refactor this before we can use dataclass on it
-    def __init__(self, *, x: int = 0, y: int = 0, char: str = "?",
-                 color: Tuple[int, int, int] = color.white,
-                 name: str = "<Unnamed>", ai_cls: Type[BaseAI],
-                 fighter: Fighter, inventory: Inventory, level: Level):
+    def __init__(
+        self,
+        *,
+        x: int = 0,
+        y: int = 0,
+        char: str = "?",
+        color: Tuple[int, int, int] = color.white,
+        name: str = "<Unnamed>",
+        ai_cls: Type[BaseAI],
+        equipment: Equipment,
+        fighter: Fighter,
+        inventory: Inventory,
+        level: Level,
+    ):
         super().__init__(x=x, y=y, char=char, color=color, name=name,
                          blocks_movement=True, render_order=RenderOrder.actor)
         self.ai: Optional[BaseAI] = ai_cls(self)
+        self.equipment: Equipment = equipment
+        self.equipment.parent = self
         self.fighter = fighter
         self.fighter.parent = self
         self.inventory = inventory
@@ -90,10 +104,25 @@ class Actor(Entity):
 
 class Item(Entity):
     # TODO: Need to refactor this before we can use dataclass on it
-    def __init__(self, *, x: int = 0, y: int = 0, char: str = "?",
-                 color: Tuple[int, int, int] = color.white,
-                 name: str = "<Unnamed>", consumable: Consumable):
+    def __init__(
+        self,
+        *,
+        x: int = 0,
+        y: int = 0,
+        char: str = "?",
+        color: Tuple[int, int, int] = color.white,
+        name: str = "<Unnamed>",
+        consumable: Optional[Consumable] = None,
+        equippable: Optional[Equippable] = None,
+    ):
         super().__init__(x=x, y=y, char=char, color=color, name=name,
                          blocks_movement=False, render_order=RenderOrder.item)
         self.consumable = consumable
-        self.consumable.parent = self
+
+        if self.consumable:
+            self.consumable.parent = self
+
+        self.equippable = equippable
+
+        if self.equippable:
+            self.equippable.parent = self

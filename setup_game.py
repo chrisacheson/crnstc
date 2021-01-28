@@ -40,6 +40,14 @@ def new_game() -> Engine:
     engine.message_log.add_message("You've broken into a corporate facility"
                                    " that looks suspiciously like a roguelike"
                                    " dungeon.", color.welcome_text)
+    combat_knife = copy.deepcopy(entity_factories.combat_knife)
+    combat_knife.parent = player.inventory
+    player.inventory.items.append(combat_knife)
+    player.equipment.toggle_equip(combat_knife, add_message=False)
+    kevlar_vest = copy.deepcopy(entity_factories.kevlar_vest)
+    kevlar_vest.parent = player.inventory
+    player.inventory.items.append(kevlar_vest)
+    player.equipment.toggle_equip(kevlar_vest, add_message=False)
     return engine
 
 

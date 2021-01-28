@@ -19,7 +19,11 @@ max_items_by_floor = [(1, 1), (4, 2)]
 max_enemies_by_floor = [(1, 2), (4, 3), (6, 5)]
 item_chances: Dict[int, List[Tuple[Entity, int]]] = {
     0: [(entity_factories.medkit, 35)],
-    6: [(entity_factories.grenade, 25)],
+    4: [(entity_factories.telescoping_baton, 5)],
+    6: [
+        (entity_factories.grenade, 25),
+        (entity_factories.ballistic_plate_armor, 15),
+    ],
 }
 enemy_chances: Dict[int, List[Tuple[Entity, int]]] = {
     0: [(entity_factories.corpsec_guard, 80)],
