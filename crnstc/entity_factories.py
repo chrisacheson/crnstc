@@ -1,11 +1,11 @@
-from components.ai import BaseAI, HostileEnemy
-from components import consumable, equippable
-from components.equipment import Equipment
-from components.fighter import Fighter
-from components.inventory import Inventory
-from components.level import Level
-from entity import Actor, Item
-import color
+from crnstc.components.ai import BaseAI, HostileEnemy
+from crnstc.components import consumable, equippable
+from crnstc.components.equipment import Equipment
+from crnstc.components.fighter import Fighter
+from crnstc.components.inventory import Inventory
+from crnstc.components.level import Level
+from crnstc.entity import Actor, Item
+from crnstc import color
 
 player = Actor(
     char="@",

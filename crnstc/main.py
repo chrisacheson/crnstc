@@ -3,10 +3,10 @@ import traceback
 
 import tcod
 
-import color
-import exceptions
-from input_handlers import BaseEventHandler, EventHandler
-import setup_game
+from crnstc import color
+from crnstc import exceptions
+from crnstc.input_handlers import BaseEventHandler, EventHandler
+from crnstc import setup_game
 
 
 def save_game(handler: BaseEventHandler, filename: str) -> None:
@@ -19,7 +19,7 @@ def main() -> None:
     screen_width = 80
     screen_height = 50
 
-    tileset = tcod.tileset.load_tilesheet(path="16x16-sb-ascii.png",
+    tileset = tcod.tileset.load_tilesheet(path="assets/16x16-sb-ascii.png",
                                           columns=16, rows=16,
                                           charmap=tcod.tileset.CHARMAP_CP437)
     root_console = tcod.Console(width=screen_width, height=screen_height,

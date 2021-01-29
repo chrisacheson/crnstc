@@ -6,13 +6,13 @@ from dataclasses import dataclass, InitVar, field
 
 import tcod
 
-import entity_factories
-from game_map import GameMap
-import tile_types
+from crnstc import entity_factories
+from crnstc.game_map import GameMap
+from crnstc import tile_types
 
 if TYPE_CHECKING:
-    from engine import Engine
-    from entity import Entity
+    from crnstc.engine import Engine
+    from crnstc.entity import Entity
 
 
 max_items_by_floor = [(1, 1), (4, 2)]

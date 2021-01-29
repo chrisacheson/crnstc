@@ -6,15 +6,15 @@ from dataclasses import dataclass
 
 import tcod.event
 
-import actions
-from actions import Action, BumpAction, WaitAction, PickupAction
-import color
-import exceptions
-from utils import clamp
+from crnstc import actions
+from crnstc.actions import Action, BumpAction, WaitAction, PickupAction
+from crnstc import color
+from crnstc import exceptions
+from crnstc.utils import clamp
 
 if TYPE_CHECKING:
-    from engine import Engine
-    from entity import Item
+    from crnstc.engine import Engine
+    from crnstc.entity import Item
 
 
 move_keys = {

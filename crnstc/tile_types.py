@@ -2,7 +2,7 @@ from typing import Tuple
 
 import numpy as np  # type: ignore
 
-import color
+from crnstc import color
 
 
 graphic_dt = np.dtype([("ch", np.int32),

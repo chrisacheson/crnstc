@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import Optional, Tuple, TYPE_CHECKING
 from dataclasses import dataclass
 
-import color
-import exceptions
+from crnstc import color
+from crnstc import exceptions
 
 if TYPE_CHECKING:
-    from engine import Engine
-    from entity import Entity, Actor, Item
+    from crnstc.engine import Engine
+    from crnstc.entity import Entity, Actor, Item
 
 
 @dataclass

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import tcod
 
-import color
+from crnstc import color
 
 
 @dataclass

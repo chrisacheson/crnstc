@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 
-from components.base_component import BaseComponent
-from equipment_types import EquipmentType
+from crnstc.components.base_component import BaseComponent
+from crnstc.equipment_types import EquipmentType
 
 if TYPE_CHECKING:
-    from entity import Item
+    from crnstc.entity import Item
 
 
 @dataclass

@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 
 if TYPE_CHECKING:
-    from engine import Engine
-    from entity import Entity
-    from game_map import GameMap
+    from crnstc.engine import Engine
+    from crnstc.entity import Entity
+    from crnstc.game_map import GameMap
 
 
 @dataclass

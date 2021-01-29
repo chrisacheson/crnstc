@@ -8,14 +8,15 @@ from dataclasses import dataclass, field
 from tcod.console import Console
 from tcod.map import compute_fov
 
-import exceptions
-from message_log import MessageLog
-from render_functions import (render_bar, render_names_at_mouse_location,
-                              render_dungeon_level)
+from crnstc import exceptions
+from crnstc.message_log import MessageLog
+from crnstc.render_functions import (render_bar,
+                                     render_names_at_mouse_location,
+                                     render_dungeon_level)
 
 if TYPE_CHECKING:
-    from entity import Actor
-    from game_map import GameMap, GameWorld
+    from crnstc.entity import Actor
+    from crnstc.game_map import GameMap, GameWorld
 
 
 @dataclass

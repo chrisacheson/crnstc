@@ -4,15 +4,15 @@ from typing import Optional, TYPE_CHECKING
 from dataclasses import dataclass, field
 import math
 
-import actions
-import color
-import components.inventory
-from components.base_component import BaseComponent
-from exceptions import Impossible
-from input_handlers import ActionOrHandler, AreaRangedAttackHandler
+from crnstc import actions
+from crnstc import color
+from crnstc.components.inventory import Inventory
+from crnstc.components.base_component import BaseComponent
+from crnstc.exceptions import Impossible
+from crnstc.input_handlers import ActionOrHandler, AreaRangedAttackHandler
 
 if TYPE_CHECKING:
-    from entity import Actor, Item
+    from crnstc.entity import Actor, Item
 
 
 class Consumable(BaseComponent):
@@ -27,7 +27,7 @@ class Consumable(BaseComponent):
     def consume(self) -> None:
         entity = self.parent
         inventory = entity.parent
-        if isinstance(inventory, components.inventory.Inventory):
+        if isinstance(inventory, Inventory):
             inventory.items.remove(entity)
 
 

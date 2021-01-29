@@ -8,14 +8,16 @@ from typing import Optional
 
 import tcod
 
-import color
-from engine import Engine
-import entity_factories
-from game_map import GameWorld
-from input_handlers import BaseEventHandler, MainGameEventHandler, PopupMessage
+from crnstc import color
+from crnstc.engine import Engine
+from crnstc import entity_factories
+from crnstc.game_map import GameWorld
+from crnstc.input_handlers import (BaseEventHandler, MainGameEventHandler,
+                                   PopupMessage)
 
 
-background_image = tcod.image.load("beeple_mike_winkelman_dvde.png")[:, :, :3]
+background_image_path = "assets/beeple_mike_winkelman_dvde.png"
+background_image = tcod.image.load(background_image_path)[:, :, :3]
 
 
 def new_game() -> Engine:

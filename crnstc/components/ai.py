@@ -5,10 +5,10 @@ from typing import List, Tuple, TYPE_CHECKING
 import numpy as np  # type: ignore
 import tcod
 
-from actions import Action, MeleeAction, MovementAction, WaitAction
+from crnstc.actions import Action, MeleeAction, MovementAction, WaitAction
 
 if TYPE_CHECKING:
-    from entity import Actor
+    from crnstc.entity import Actor
 
 
 class BaseAI(Action):

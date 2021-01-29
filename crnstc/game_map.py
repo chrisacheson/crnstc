@@ -6,12 +6,12 @@ from dataclasses import dataclass, field, InitVar
 import numpy as np  # type: ignore
 from tcod.console import Console
 
-from entity import Actor, Item
-import tile_types
+from crnstc.entity import Actor, Item
+from crnstc import tile_types
 
 if TYPE_CHECKING:
-    from engine import Engine
-    from entity import Entity
+    from crnstc.engine import Engine
+    from crnstc.entity import Entity
 
 
 @dataclass
@@ -96,7 +96,7 @@ class GameWorld:
     current_floor: int = 0
 
     def generate_floor(self) -> None:
-        from procgen import generate_dungeon
+        from crnstc.procgen import generate_dungeon
 
         self.current_floor += 1
         self.engine.game_map = generate_dungeon(

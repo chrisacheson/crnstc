@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import List, TYPE_CHECKING
 from dataclasses import dataclass, field
 
-from components.base_component import BaseComponent
+from crnstc.components.base_component import BaseComponent
 
 if TYPE_CHECKING:
-    from entity import Actor, Item
+    from crnstc.entity import Actor, Item
 
 
 @dataclass
