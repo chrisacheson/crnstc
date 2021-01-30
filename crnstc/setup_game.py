@@ -14,6 +14,7 @@ from crnstc import entity_factories
 from crnstc.game_map import GameWorld
 from crnstc.input_handlers import (BaseEventHandler, MainGameEventHandler,
                                    PopupMessage)
+from crnstc.geometry import Rectangle
 
 
 background_image_path = "assets/beeple_mike_winkelman_dvde.png"
@@ -21,8 +22,7 @@ background_image = tcod.image.load(background_image_path)[:, :, :3]
 
 
 def new_game() -> Engine:
-    map_width = 80
-    map_height = 43
+    map_shape = Rectangle(x=0, y=0, w=80, h=43)
     room_max_size = 10
     room_min_size = 6
     max_rooms = 30
@@ -31,11 +31,10 @@ def new_game() -> Engine:
     engine = Engine(player=player)
     engine.game_world = GameWorld(
         engine=engine,
+        map_shape=map_shape,
         max_rooms=max_rooms,
         room_min_size=room_min_size,
         room_max_size=room_max_size,
-        map_width=map_width,
-        map_height=map_height,
     )
     engine.game_world.generate_floor()
     engine.update_fov()

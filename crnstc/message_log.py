@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import tcod
 
 from crnstc import color
+from crnstc.geometry import Rectangle
 
 
 @dataclass
@@ -34,10 +35,9 @@ class MessageLog:
         else:
             self.messages.append(Message(text, fg))
 
-    def render(self, console: tcod.Console, x: int, y: int, width: int,
-               height: int) -> None:
-        self.render_messages(console=console, x=x, y=y, width=width,
-                             height=height, messages=self.messages)
+    def render(self, console: tcod.Console, shape: Rectangle) -> None:
+        self.render_messages(console=console, shape=shape,
+                             messages=self.messages)
 
     @staticmethod
     def wrap(string: str, width: int) -> Iterable[str]:
@@ -45,13 +45,14 @@ class MessageLog:
             yield from textwrap.wrap(line, width, expand_tabs=True)
 
     @classmethod
-    def render_messages(cls, console: tcod.Console, x: int, y: int, width: int,
-                        height: int, messages: Reversible[Message]) -> None:
-        y_offset = height - 1
+    def render_messages(cls, console: tcod.Console, shape: Rectangle,
+                        messages: Reversible[Message]) -> None:
+        y_offset = shape.h - 1
 
         for message in reversed(messages):
-            for line in reversed(list(cls.wrap(message.full_text, width))):
-                console.print(x=x, y=y + y_offset, string=line, fg=message.fg)
+            for line in reversed(list(cls.wrap(message.full_text, shape.w))):
+                text_position = shape.relative(x=0, y=y_offset)
+                console.print(*text_position, string=line, fg=message.fg)
                 y_offset -= 1
                 if y_offset < 0:
                     return

@@ -71,13 +71,13 @@ class ExplosiveConsumable(Consumable):
 
     def activate(self, action: actions.ItemAction) -> None:
         consumer = action.entity
-        target_xy = action.target_xy
-        assert target_xy is not None
+        target_position = action.target_position
+        assert target_position is not None
 
-        if not self.engine.game_map.visible[action.target_xy]:
+        if not self.engine.game_map.visible[action.target_position]:
             raise Impossible("You can't target an area that you can't see.")
 
-        if consumer.distance(*target_xy) > self.max_range:
+        if consumer.position.distance(target_position) > self.max_range:
             raise Impossible("Target out of range.")
 
         self.engine.message_log.add_message(
@@ -87,7 +87,7 @@ class ExplosiveConsumable(Consumable):
         targets_hit = False
 
         for actor in self.engine.game_map.actors:
-            distance = actor.distance(*target_xy)
+            distance = actor.position.distance(target_position)
 
             if distance > self.radius:
                 continue

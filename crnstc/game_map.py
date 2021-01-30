@@ -8,6 +8,7 @@ from tcod.console import Console
 
 from crnstc.entity import Actor, Item
 from crnstc import tile_types
+from crnstc.geometry import Position, Rectangle
 
 if TYPE_CHECKING:
     from crnstc.engine import Engine
@@ -17,20 +18,18 @@ if TYPE_CHECKING:
 @dataclass
 class GameMap:
     engine: Engine
-    width: int
-    height: int
+    shape: Rectangle
     entities: Set[Entity] = field(init=False)
     entities_: InitVar[Iterable[Entity]]
 
     def __post_init__(self, entities_):
         self.entities = set(entities_)
-        self.tiles = np.full((self.width, self.height),
-                             fill_value=tile_types.wall, order="F")
-        self.visible = np.full((self.width, self.height),
-                               fill_value=False, order="F")
-        self.explored = np.full((self.width, self.height),
-                                fill_value=False, order="F")
-        self.down_stairs_location = (0, 0)
+        self.shape = Rectangle(0, 0, *self.shape.dimensions)
+        dimensions = self.shape.dimensions
+        self.tiles = np.full(dimensions, fill_value=tile_types.wall, order="F")
+        self.visible = np.full(dimensions, fill_value=False, order="F")
+        self.explored = np.full(dimensions, fill_value=False, order="F")
+        self.down_stairs_location = Position(0, 0)
 
     @property
     def game_map(self) -> GameMap:
@@ -50,25 +49,25 @@ class GameMap:
                     in self.entities
                     if isinstance(entity, Item))
 
-    def get_blocker(self, x: int, y: int) -> Optional[Entity]:
+    def get_blocker(self, position: Position) -> Optional[Entity]:
         for entity in self.entities:
-            if entity.blocks_movement and entity.x == x and entity.y == y:
+            if entity.blocks_movement and entity.position == position:
                 return entity
 
         return None
 
-    def get_actor_at(self, x: int, y: int) -> Optional[Actor]:
+    def get_actor_at(self, position: Position) -> Optional[Actor]:
         for actor in self.actors:
-            if actor.x == x and actor.y == y:
+            if actor.position == position:
                 return actor
 
         return None
 
-    def in_bounds(self, x: int, y: int) -> bool:
-        return 0 <= x < self.width and 0 <= y < self.height
+    def in_bounds(self, position: Position) -> bool:
+        return self.shape.contains(position)
 
     def render(self, console: Console) -> None:
-        console.tiles_rgb[0:self.width, 0:self.height] = np.select(
+        console.tiles_rgb[self.shape.slice] = np.select(
             condlist=[self.visible, self.explored],
             choicelist=[self.tiles["light"], self.tiles["dark"]],
             default=tile_types.shroud,
@@ -80,16 +79,15 @@ class GameMap:
         )
 
         for entity in entities_sorted_for_rendering:
-            if self.visible[entity.x, entity.y]:
-                console.print(x=entity.x, y=entity.y, string=entity.char,
+            if self.visible[entity.position]:
+                console.print(*entity.position, string=entity.char,
                               fg=entity.color)
 
 
 @dataclass
 class GameWorld:
     engine: Engine
-    map_width: int
-    map_height: int
+    map_shape: Rectangle
     max_rooms: int
     room_min_size: int
     room_max_size: int
@@ -103,7 +101,6 @@ class GameWorld:
             max_rooms=self.max_rooms,
             room_min_size=self.room_min_size,
             room_max_size=self.room_max_size,
-            map_width=self.map_width,
-            map_height=self.map_height,
+            map_shape=self.map_shape,
             engine=self.engine,
         )

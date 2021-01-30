@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from dataclasses import dataclass
 
 from crnstc import color
 from crnstc import exceptions
+from crnstc.geometry import Position, Vector
 
 if TYPE_CHECKING:
     from crnstc.engine import Engine
@@ -27,12 +28,10 @@ class Action:
 
 class PickupAction(Action):
     def perform(self) -> None:
-        actor_location_x = self.entity.x
-        actor_location_y = self.entity.y
         inventory = self.entity.inventory
 
         for item in self.engine.game_map.items:
-            if actor_location_x == item.x and actor_location_y == item.y:
+            if self.entity.position == item.position:
                 if len(inventory.items) >= inventory.capacity:
                     raise exceptions.Impossible("Your inventory is full.")
 
@@ -49,16 +48,16 @@ class PickupAction(Action):
 @dataclass
 class ItemAction(Action):
     item: Item
-    target_xy: Optional[Tuple[int, int]] = None
+    target_position: Optional[Position] = None
 
     def __post_init__(self):
-        if not self.target_xy:
-            self.target_xy = self.entity.x, self.entity.y
+        if not self.target_position:
+            self.target_position = self.entity.position
 
     @property
     def target_actor(self) -> Optional[Actor]:
-        assert self.target_xy is not None
-        return self.engine.game_map.get_actor_at(*self.target_xy)
+        assert self.target_position is not None
+        return self.engine.game_map.get_actor_at(self.target_position)
 
     def perform(self) -> None:
         if self.item.consumable:
@@ -90,7 +89,7 @@ class TakeStairsAction(Action):
     def perform(self) -> None:
         down_stairs_location = self.engine.game_map.down_stairs_location
 
-        if (self.entity.x, self.entity.y) == down_stairs_location:
+        if self.entity.position == down_stairs_location:
             self.engine.game_world.generate_floor()
             self.engine.message_log.add_message(
                 "You proceed further into the facility.",
@@ -100,20 +99,19 @@ class TakeStairsAction(Action):
 
 @dataclass
 class ActionWithDirection(Action):
-    dx: int
-    dy: int
+    direction: Vector
 
     @property
-    def dest_xy(self) -> Tuple[int, int]:
-        return self.entity.x + self.dx, self.entity.y + self.dy
+    def destination(self) -> Position:
+        return self.entity.position + self.direction
 
     @property
     def blocking_entity(self) -> Optional[Entity]:
-        return self.engine.game_map.get_blocker(*self.dest_xy)
+        return self.engine.game_map.get_blocker(self.destination)
 
     @property
     def target_actor(self) -> Optional[Actor]:
-        return self.engine.game_map.get_actor_at(*self.dest_xy)
+        return self.engine.game_map.get_actor_at(self.destination)
 
 
 class MeleeAction(ActionWithDirection):
@@ -145,25 +143,24 @@ class MeleeAction(ActionWithDirection):
 
 class MovementAction(ActionWithDirection):
     def perform(self) -> None:
-        dest_x, dest_y = self.dest_xy
 
-        if not self.engine.game_map.in_bounds(x=dest_x, y=dest_y):
+        if not self.engine.game_map.in_bounds(self.destination):
             raise exceptions.Impossible("That way is blocked.")
 
-        if not self.engine.game_map.tiles["walkable"][dest_x, dest_y]:
+        if not self.engine.game_map.tiles["walkable"][self.destination]:
             raise exceptions.Impossible("That way is blocked.")
 
-        if self.engine.game_map.get_blocker(x=dest_x, y=dest_y):
+        if self.engine.game_map.get_blocker(self.destination):
             raise exceptions.Impossible("That way is blocked.")
 
-        self.entity.move(dx=self.dx, dy=self.dy)
+        self.entity.move(self.direction)
 
 
 class BumpAction(ActionWithDirection):
     def perform(self) -> None:
         if self.target_actor:
             return MeleeAction(entity=self.entity,
-                               dx=self.dx, dy=self.dy).perform()
+                               direction=self.direction).perform()
         else:
             return MovementAction(entity=self.entity,
-                                  dx=self.dx, dy=self.dy).perform()
+                                  direction=self.direction).perform()

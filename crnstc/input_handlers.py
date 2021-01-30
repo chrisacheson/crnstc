@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Callable, Tuple, Optional, Union, TYPE_CHECKING
+from typing import Callable, Optional, Union, TYPE_CHECKING
 from dataclasses import dataclass
 
 import tcod.event
@@ -11,6 +11,7 @@ from crnstc.actions import Action, BumpAction, WaitAction, PickupAction
 from crnstc import color
 from crnstc import exceptions
 from crnstc.utils import clamp
+from crnstc.geometry import compass, Position, Rectangle
 
 if TYPE_CHECKING:
     from crnstc.engine import Engine
@@ -19,32 +20,32 @@ if TYPE_CHECKING:
 
 move_keys = {
     # Arrow keys
-    tcod.event.K_UP: (0, -1),
-    tcod.event.K_DOWN: (0, 1),
-    tcod.event.K_LEFT: (-1, 0),
-    tcod.event.K_RIGHT: (1, 0),
-    tcod.event.K_HOME: (-1, -1),
-    tcod.event.K_END: (-1, 1),
-    tcod.event.K_PAGEUP: (1, -1),
-    tcod.event.K_PAGEDOWN: (1, 1),
+    tcod.event.K_UP: compass.north,
+    tcod.event.K_DOWN: compass.south,
+    tcod.event.K_LEFT: compass.west,
+    tcod.event.K_RIGHT: compass.east,
+    tcod.event.K_HOME: compass.northwest,
+    tcod.event.K_END: compass.southwest,
+    tcod.event.K_PAGEUP: compass.northeast,
+    tcod.event.K_PAGEDOWN: compass.southeast,
     # Numpad keys
-    tcod.event.K_KP_1: (-1, 1),
-    tcod.event.K_KP_2: (0, 1),
-    tcod.event.K_KP_3: (1, 1),
-    tcod.event.K_KP_4: (-1, 0),
-    tcod.event.K_KP_6: (1, 0),
-    tcod.event.K_KP_7: (-1, -1),
-    tcod.event.K_KP_8: (0, -1),
-    tcod.event.K_KP_9: (1, -1),
+    tcod.event.K_KP_1: compass.southwest,
+    tcod.event.K_KP_2: compass.south,
+    tcod.event.K_KP_3: compass.southeast,
+    tcod.event.K_KP_4: compass.west,
+    tcod.event.K_KP_6: compass.east,
+    tcod.event.K_KP_7: compass.northwest,
+    tcod.event.K_KP_8: compass.north,
+    tcod.event.K_KP_9: compass.northeast,
     # Vi keys
-    tcod.event.K_h: (-1, 0),
-    tcod.event.K_j: (0, 1),
-    tcod.event.K_k: (0, -1),
-    tcod.event.K_l: (1, 0),
-    tcod.event.K_y: (-1, -1),
-    tcod.event.K_u: (1, -1),
-    tcod.event.K_b: (-1, 1),
-    tcod.event.K_n: (1, 1),
+    tcod.event.K_h: compass.west,
+    tcod.event.K_j: compass.south,
+    tcod.event.K_k: compass.north,
+    tcod.event.K_l: compass.east,
+    tcod.event.K_y: compass.northwest,
+    tcod.event.K_u: compass.northeast,
+    tcod.event.K_b: compass.southwest,
+    tcod.event.K_n: compass.southeast,
 }
 
 wait_keys = {
@@ -137,8 +138,10 @@ class EventHandler(BaseEventHandler):
         return True
 
     def ev_mousemotion(self, event: tcod.event.MouseMotion) -> None:
-        if self.engine.game_map.in_bounds(event.tile.x, event.tile.y):
-            self.engine.mouse_location = event.tile.x, event.tile.y
+        position = Position(*event.tile)
+
+        if self.engine.game_map.in_bounds(position):
+            self.engine.mouse_location = position
 
     def on_render(self, console: tcod.Console) -> None:
         self.engine.render(console)
@@ -175,26 +178,27 @@ class CharacterScreenEventHandler(AskUserEventHandler):
     def on_render(self, console: tcod.Console) -> None:
         super().on_render(console)
 
-        if self.engine.player.x <= 30:
-            x = 40
-        else:
-            x = 0
+        dialog_box = Rectangle(x=0, y=0, w=len(self.title) + 4, h=7)
 
-        y = 0
-        width = len(self.title) + 4
-        console.draw_frame(x=x, y=y, width=width, height=7, title=self.title,
-                           clear=True, fg=color.white, bg=color.black)
+        if self.engine.player.position.x <= 30:
+            dialog_box = dialog_box.move(dx=40, dy=0)
+
+        console.draw_frame(*dialog_box, title=self.title, clear=True,
+                           fg=color.white, bg=color.black)
         level = self.engine.player.level
         fighter = self.engine.player.fighter
-        console.print(x=x + 1, y=y + 1, string=f"Level: {level.current_level}")
-        console.print(x=x + 1, y=y + 2, string=f"XP: {level.current_xp}")
-        console.print(
-            x=x + 1,
-            y=y + 3,
-            string=f"XP for next Level: {level.experience_to_next_level}",
-        )
-        console.print(x=x + 1, y=y + 4, string=f"Attack: {fighter.power}")
-        console.print(x=x + 1, y=y + 5, string=f"Defense: {fighter.defense}")
+        strings = [
+            f"Level: {level.current_level}",
+            f"XP: {level.current_xp}",
+            f"XP for next Level: {level.experience_to_next_level}",
+            f"Attack: {fighter.power}",
+            f"Defense: {fighter.defense}",
+        ]
+        text_position = dialog_box.relative(x=1, y=1)
+
+        for string in strings:
+            console.print(*text_position, string=string)
+            text_position += compass.south
 
 
 class LevelUpEventHandler(AskUserEventHandler):
@@ -203,31 +207,27 @@ class LevelUpEventHandler(AskUserEventHandler):
     def on_render(self, console: tcod.Console) -> None:
         super().on_render(console)
 
-        if self.engine.player.x <= 30:
-            x = 40
-        else:
-            x = 0
+        dialog_box = Rectangle(x=0, y=0, w=35, h=8)
 
-        console.draw_frame(x=x, y=0, width=35, height=8, title=self.title,
-                           clear=True, fg=color.white, bg=color.black)
-        console.print(x=x + 1, y=1, string="Congratulations! You level up!")
-        console.print(x=x + 1, y=2, string="Select an attribute to increase.")
+        if self.engine.player.position.x <= 30:
+            dialog_box = dialog_box.move(dx=40, dy=0)
+
+        console.draw_frame(*dialog_box, title=self.title, clear=True,
+                           fg=color.white, bg=color.black)
         fighter = self.engine.player.fighter
-        console.print(
-            x=x + 1,
-            y=4,
-            string=f"a) Constitution (+20 HP, from {fighter.max_hp})",
-        )
-        console.print(
-            x=x + 1,
-            y=5,
-            string=f"b) Strength (+1 attack, from {fighter.power})",
-        )
-        console.print(
-            x=x + 1,
-            y=6,
-            string=f"c) Agility (+1 defense, from {fighter.defense})",
-        )
+        strings = [
+            "Congratulations! You level up!",
+            "Select an attribute to increase.",
+            "",
+            f"a) Constitution (+20 HP, from {fighter.max_hp})",
+            f"b) Strength (+1 attack, from {fighter.power})",
+            f"c) Agility (+1 defense, from {fighter.defense})",
+        ]
+        text_position = dialog_box.relative(x=1, y=1)
+
+        for string in strings:
+            console.print(*text_position, string=string)
+            text_position += compass.south
 
     def ev_keydown(self,
                    event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
@@ -268,16 +268,14 @@ class InventoryEventHandler(AskUserEventHandler):
         if height <= 3:
             height = 3
 
-        if player.x <= 30:
-            x = 40
-        else:
-            x = 0
+        dialog_box = Rectangle(x=0, y=0, w=len(self.title) + 4, h=height)
 
-        y = 0
-        width = len(self.title) + 4
-        console.draw_frame(x=x, y=y, width=width, height=height,
-                           title=self.title, clear=True, fg=color.white,
-                           bg=color.black)
+        if player.position.x <= 30:
+            dialog_box = dialog_box.move(dx=40, dy=0)
+
+        console.draw_frame(*dialog_box, title=self.title, clear=True,
+                           fg=color.white, bg=color.black)
+        text_position = dialog_box.relative(x=1, y=1)
 
         if num_inventory_items > 0:
             for i, item in enumerate(player.inventory.items):
@@ -288,9 +286,10 @@ class InventoryEventHandler(AskUserEventHandler):
                 if is_equipped:
                     item_string = f"{item_string} (E)"
 
-                console.print(x + 1, y + i + 1, item_string)
+                console.print(*text_position, item_string)
+                text_position += compass.south
         else:
-            console.print(x + 1, y + 1, "(Empty)")
+            console.print(*text_position, "(Empty)")
 
     def ev_keydown(self,
                    event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
@@ -335,13 +334,13 @@ class InventoryDropHandler(InventoryEventHandler):
 class SelectIndexHandler(AskUserEventHandler):
     def __post_init__(self):
         player = self.engine.player
-        self.engine.mouse_location = player.x, player.y
+        self.engine.mouse_location = player.position
 
     def on_render(self, console: tcod.Console) -> None:
         super().on_render(console)
-        x, y = self.engine.mouse_location
-        console.tiles_rgb["bg"][x, y] = color.white
-        console.tiles_rgb["fg"][x, y] = color.black
+        pos = self.engine.mouse_location
+        console.tiles_rgb["bg"][pos] = color.white
+        console.tiles_rgb["fg"][pos] = color.black
 
     def ev_keydown(self,
                    event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
@@ -359,16 +358,14 @@ class SelectIndexHandler(AskUserEventHandler):
             if event.mod & (tcod.event.KMOD_LALT | tcod.event.KMOD_RALT):
                 modifier *= 20
 
-            x, y = self.engine.mouse_location
-            dx, dy = move_keys[key]
-            x += dx * modifier
-            y += dy * modifier
-            x = clamp(0, x, self.engine.game_map.width - 1)
-            y = clamp(0, y, self.engine.game_map.height - 1)
-            self.engine.mouse_location = x, y
+            position = self.engine.mouse_location
+            vector = move_keys[key]
+            position += vector * modifier
+            position = self.engine.game_map.shape.clamp(position)
+            self.engine.mouse_location = position
             return None
         elif key in confirm_keys:
-            return self.on_index_selected(*self.engine.mouse_location)
+            return self.on_index_selected(self.engine.mouse_location)
 
         return super().ev_keydown(event)
 
@@ -376,28 +373,32 @@ class SelectIndexHandler(AskUserEventHandler):
         self,
         event: tcod.event.MouseButtonDown,
     ) -> Optional[ActionOrHandler]:
-        if self.engine.game_map.in_bounds(*event.tile):
+
+        position = Position(*event.tile)
+
+        if self.engine.game_map.in_bounds(position):
             if event.button == 1:
-                return self.on_index_selected(*event.tile)
+                return self.on_index_selected(position)
 
         return super().ev_mousebuttondown(event)
 
-    def on_index_selected(self, x: int, y: int) -> Optional[ActionOrHandler]:
+    def on_index_selected(self,
+                          position: Position) -> Optional[ActionOrHandler]:
         raise NotImplementedError()
 
 
 class LookHandler(SelectIndexHandler):
-    def on_index_selected(self, x: int, y: int) -> MainGameEventHandler:
+    def on_index_selected(self, position: Position) -> MainGameEventHandler:
         return MainGameEventHandler(self.engine)
 
 
 @dataclass
 class RangedAttackHandler(SelectIndexHandler):
-    callback: Callable[[Tuple[int, int]], Optional[Action]]
+    callback: Callable[[Position], Optional[Action]]
 
-    def on_index_selected(self, x: int, y: int) -> Optional[Action]:
+    def on_index_selected(self, position: Position) -> Optional[Action]:
         # https://github.com/python/mypy/issues/5485
-        return self.callback((x, y))  # type: ignore
+        return self.callback(position)  # type: ignore
 
 
 @dataclass
@@ -406,15 +407,10 @@ class AreaRangedAttackHandler(RangedAttackHandler):
 
     def on_render(self, console: tcod.Console) -> None:
         super().on_render(console)
-        x, y = self.engine.mouse_location
-        console.draw_frame(
-            x=x - self.radius,
-            y=y - self.radius,
-            width=self.radius * 2 + 1,
-            height=self.radius * 2 + 1,
-            fg=color.red,
-            clear=False,
-        )
+        diameter = self.radius * 2 + 1
+        area = Rectangle(x=0, y=0, w=diameter, h=diameter)
+        area = area.center_on(self.engine.mouse_location)
+        console.draw_frame(*area, fg=color.red, clear=False)
 
 
 class MainGameEventHandler(EventHandler):
@@ -429,7 +425,7 @@ class MainGameEventHandler(EventHandler):
             return actions.TakeStairsAction(player)
 
         if key in move_keys:
-            action = BumpAction(player, *move_keys[key])
+            action = BumpAction(player, move_keys[key])
         elif key in wait_keys:
             action = WaitAction(player)
         elif key == tcod.event.K_ESCAPE:
@@ -481,19 +477,16 @@ class HistoryViewer(EventHandler):
 
     def on_render(self, console: tcod.Console) -> None:
         super().on_render(console)
-        log_console = tcod.Console(console.width - 6, console.height - 6)
-        log_console.draw_frame(0, 0, log_console.width, log_console.height)
-        log_console.print_box(0, 0, log_console.width, 1, "Message History",
-                              alignment=tcod.CENTER)
+        dialog_box = Rectangle(x=0, y=0, w=console.width, h=console.height)
+        dialog_box = dialog_box.grow(-3)
+        console.draw_frame(*dialog_box, title="Message History", clear=True,
+                           fg=color.white, bg=color.black)
+        text_area = dialog_box.grow(-1)
         self.engine.message_log.render_messages(
-            log_console,
-            1,
-            1,
-            log_console.width - 2,
-            log_console.height - 2,
+            console,
+            text_area,
             self.engine.message_log.messages[: self.cursor + 1],
         )
-        log_console.blit(console, 3, 3)
 
     def ev_keydown(
         self,

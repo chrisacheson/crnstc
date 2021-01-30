@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import copy
-import math
 from typing import Optional, Tuple, Type, TypeVar, TYPE_CHECKING, Union
 from dataclasses import dataclass
 
 from crnstc import color
 from crnstc.render_order import RenderOrder
+from crnstc.geometry import Position, Vector
 
 if TYPE_CHECKING:
     from crnstc.components.ai import BaseAI
@@ -24,8 +24,7 @@ T = TypeVar("T", bound="Entity")
 @dataclass(eq=False)
 class Entity:
     parent: Optional[Union[GameMap, Inventory]] = None
-    x: int = 0
-    y: int = 0
+    position: Position = Position(x=0, y=0)
     char: str = "?"
     color: Tuple[int, int, int] = color.white
     name: str = "<Unnamed>"
@@ -41,17 +40,16 @@ class Entity:
         assert self.parent is not None
         return self.parent.game_map
 
-    def spawn(self: T, game_map: GameMap, x: int, y: int) -> T:
+    def spawn(self: T, game_map: GameMap, position: Position) -> T:
         clone = copy.deepcopy(self)
-        clone.x = x
-        clone.y = y
+        clone.position = position
         clone.parent = game_map
         game_map.entities.add(clone)
         return clone
 
-    def place(self, x: int, y: int,
+    def place(self, position: Position,
               game_map: Optional[GameMap] = None) -> None:
-        self.x, self.y = x, y
+        self.position = position
 
         if game_map:
             if self.parent and self.parent is game_map:
@@ -59,14 +57,8 @@ class Entity:
             self.parent = game_map
             game_map.entities.add(self)
 
-    def distance(self, x: int, y: int) -> float:
-        dx = x - self.x
-        dy = y - self.y
-        return math.sqrt(dx ** 2 + dy ** 2)
-
-    def move(self, dx: int, dy: int) -> None:
-        self.x += dx
-        self.y += dy
+    def move(self, direction: Vector) -> None:
+        self.position += direction
 
 
 class Actor(Entity):
@@ -74,8 +66,7 @@ class Actor(Entity):
     def __init__(
         self,
         *,
-        x: int = 0,
-        y: int = 0,
+        position: Position = Position(x=0, y=0),
         char: str = "?",
         color: Tuple[int, int, int] = color.white,
         name: str = "<Unnamed>",
@@ -85,7 +76,7 @@ class Actor(Entity):
         inventory: Inventory,
         level: Level,
     ):
-        super().__init__(x=x, y=y, char=char, color=color, name=name,
+        super().__init__(position=position, char=char, color=color, name=name,
                          blocks_movement=True, render_order=RenderOrder.actor)
         self.ai: Optional[BaseAI] = ai_cls(self)
         self.equipment: Equipment = equipment
@@ -107,15 +98,14 @@ class Item(Entity):
     def __init__(
         self,
         *,
-        x: int = 0,
-        y: int = 0,
+        position: Position = Position(x=0, y=0),
         char: str = "?",
         color: Tuple[int, int, int] = color.white,
         name: str = "<Unnamed>",
         consumable: Optional[Consumable] = None,
         equippable: Optional[Equippable] = None,
     ):
-        super().__init__(x=x, y=y, char=char, color=color, name=name,
+        super().__init__(position=position, char=char, color=color, name=name,
                          blocks_movement=False, render_order=RenderOrder.item)
         self.consumable = consumable
 
