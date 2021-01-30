@@ -1,4 +1,4 @@
-from typing import Iterable, List, Reversible, Tuple
+from typing import Iterable, List, Reversible
 import textwrap
 from dataclasses import dataclass
 
@@ -11,7 +11,7 @@ from crnstc.geometry import Rectangle
 @dataclass
 class Message:
     text: str
-    fg: Tuple[int, int, int]
+    fg: color.Color
 
     def __post_init__(self):
         self.count = 1
@@ -28,7 +28,7 @@ class MessageLog:
     def __init__(self) -> None:
         self.messages: List[Message] = []
 
-    def add_message(self, text: str, fg: Tuple[int, int, int] = color.white, *,
+    def add_message(self, text: str, fg: color.Color = color.white, *,
                     stack: bool = True) -> None:
         if stack and self.messages and text == self.messages[-1].text:
             self.messages[-1].count += 1

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Optional, Tuple, Type, TypeVar, TYPE_CHECKING, Union
+from typing import Optional, Type, TypeVar, TYPE_CHECKING, Union
 from dataclasses import dataclass
 
 from crnstc import color
@@ -26,7 +26,7 @@ class Entity:
     parent: Optional[Union[GameMap, Inventory]] = None
     position: Position = Position(x=0, y=0)
     char: str = "?"
-    color: Tuple[int, int, int] = color.white
+    color: color.Color = color.white
     name: str = "<Unnamed>"
     blocks_movement: bool = False
     render_order: RenderOrder = RenderOrder.corpse
@@ -68,7 +68,7 @@ class Actor(Entity):
         *,
         position: Position = Position(x=0, y=0),
         char: str = "?",
-        color: Tuple[int, int, int] = color.white,
+        color: color.Color = color.white,
         name: str = "<Unnamed>",
         ai_cls: Type[BaseAI],
         equipment: Equipment,
@@ -100,7 +100,7 @@ class Item(Entity):
         *,
         position: Position = Position(x=0, y=0),
         char: str = "?",
-        color: Tuple[int, int, int] = color.white,
+        color: color.Color = color.white,
         name: str = "<Unnamed>",
         consumable: Optional[Consumable] = None,
         equippable: Optional[Equippable] = None,
