@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 import random
 
 from tcod.console import Console
+import tcod.image
 
 from crnstc.color import Color
 from crnstc.geometry import Rectangle, Vector
@@ -15,6 +16,7 @@ LayoutClass = Type[Layout]
 OptLayoutClass = Optional[LayoutClass]
 RectangleList = List[Rectangle]
 OptColor = Optional[Color]
+OptStr = Optional[str]
 
 
 @dataclass
@@ -112,3 +114,35 @@ class ColorBox(Widget):
                                b=random.randint(0x00, 0xFF))
 
         surface.draw_rect(*area, ch=ord(" "), bg=self.color)
+
+
+@dataclass
+class ImageBox(Widget):
+    filename: OptStr = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        self._filename: OptStr = None
+
+    def render_before_children(self, surface: Console,
+                               area: Rectangle) -> None:
+        super().render_before_children(surface=surface, area=area)
+
+        if not self.filename:
+            return
+
+        if self.filename != self._filename:
+            # New filename, need to load a new image
+            self._filename = self.filename
+            # Image with alpha channel removed
+            image = tcod.image.load(self.filename)[:, :, :3]
+            # Use an intermediate console to make sure that the image doesn't
+            # overflow our rendering area. The width and height of the image
+            # will be halved when drawn by draw_semigraphics().
+            self._image_console = Console(width=image.shape[1] // 2,
+                                          height=image.shape[0] // 2,
+                                          order="F")
+            self._image_console.draw_semigraphics(image, x=0, y=0)
+
+        self._image_console.blit(surface, *area.position, 0, 0,
+                                 *area.dimensions)

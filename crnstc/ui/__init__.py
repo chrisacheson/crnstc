@@ -2,7 +2,7 @@ import tcod
 
 from crnstc.geometry import Rectangle, Vector
 from crnstc.ui.layouts import HorizontalLayout, VerticalLayout
-from crnstc.ui.widgets import Widget, ColorBox
+from crnstc.ui.widgets import Widget, ColorBox, ImageBox
 
 
 class UserInterface:
@@ -27,7 +27,11 @@ class UserInterface:
         ) as context:
             console = context.new_console(order="F")
 
-            world_pane = ColorBox(min_size=Vector(80, 43))
+            # world_pane = ColorBox(min_size=Vector(80, 43))
+            world_pane = ImageBox(
+                filename="assets/beeple_mike_winkelman_dvde.png",
+                min_size=Vector(80, 43),
+            )
             status_pane = ColorBox()
             log_pane = ColorBox(expansion=(2.0, 1.0))
             info_section = Widget(children=[status_pane, log_pane],
