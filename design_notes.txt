@@ -141,6 +141,11 @@ In Cataclysm:DDA for example, my SUV is 4x7, and roads are sized to match, but
 trees are 1x1, and the difference is kind of jarring.
 https://www.reddit.com/r/roguelikedev/comments/5xqvh3/whats_the_scale_of_your_grid/
 
+Ideas for z-levels. Might be worth checking out X@COM to see how it's done
+there:
+https://www.reddit.com/r/roguelikedev/comments/6f55z2/multilevel_topdown_textbased_roguelike_ideas_for/
+https://www.reddit.com/r/roguelikedev/comments/k13ye2/zlevelsfaux3d/
+
 Cybernetics will need to be powered. Glucose fuel cells are an option for very
 low power implants, but larger/hungrier ones will require batteries and
 external charging. For someone with a proper residence this wouldn't be an
@@ -160,3 +165,7 @@ it'll be trivial to find build instructions on the internet, but the stuff that
 the player will really be interested in may be harder to come by. Military
 weapon systems, high-grade ECM/ECCM, etc. Would need to raid or hack
 corporate/government facilities to obtain the designs.
+
+"Dynamic" lighting? As in per-tile light levels based on local light sources,
+rather than the usual lit/unlit approach taken by most roguelikes. Would be
+great for atmosphere, but could get too computationally intensive.
