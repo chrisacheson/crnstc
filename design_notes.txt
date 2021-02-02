@@ -99,6 +99,7 @@ https://en.wikipedia.org/wiki/Maeslantkering
 https://en.wikipedia.org/wiki/Levee
 https://en.wikipedia.org/wiki/List_of_places_on_land_with_elevations_below_sea_level
 https://en.wikipedia.org/wiki/Seasteading
+Modern day dustbowl scenario in the midwest, crippling food supplies? Could provide more incentive for central red US faction to cooperate to some extent with coastal blue US faction.
 
 
 Misc notes:
@@ -145,6 +146,7 @@ Ideas for z-levels. Might be worth checking out X@COM to see how it's done
 there:
 https://www.reddit.com/r/roguelikedev/comments/6f55z2/multilevel_topdown_textbased_roguelike_ideas_for/
 https://www.reddit.com/r/roguelikedev/comments/k13ye2/zlevelsfaux3d/
+X-Com Z-levels worked quite well when coupled with an easy-to-use clickable "enemy spotted" icon to ease fighting across multiple heights.
 
 Cybernetics will need to be powered. Glucose fuel cells are an option for very
 low power implants, but larger/hungrier ones will require batteries and
@@ -158,6 +160,7 @@ https://www.technologyreview.com/2010/05/18/26929/power-from-glucose/
 https://www.cnet.com/news/human-powered-biofuel-cell-converts-glucose-into-electricity/
 https://singularityhub.com/2010/05/24/new-biofuel-cell-uses-glucose-in-the-body-to-produce-electricity-for-cyborgs/
 https://cen.acs.org/articles/94/web/2016/07/Glucose-fueled-power-source-delivers.html
+Could possibly have black market tech allowing one to jack in to charge cyber off of electric car charging stations and the like.
 
 Once we get around to implementing crafting, we may want to go with the
 "knowledge is scarce" approach that Cataclysm:DDA uses. For a lot of things
