@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import crnstc.main
+# import crnstc.main
+from crnstc.ui import UserInterface
 
 
-crnstc.main.main()
+if __name__ == "__main__":
+    UserInterface().run()
+    # crnstc.main.main()

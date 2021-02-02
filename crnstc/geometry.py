@@ -7,6 +7,7 @@ from crnstc.utils import clamp
 
 
 PositionOrVector = Union["Position", "Vector"]
+PositionOrRectangle = Union["Position", "Rectangle"]
 
 
 class Position(NamedTuple):
@@ -133,9 +134,15 @@ class Rectangle(NamedTuple):
         return Slice2d(slice(self.x, self.x + self.w),
                        slice(self.y, self.y + self.h))
 
-    def contains(self, position: Position) -> bool:
-        return (self.x <= position.x <= self.x2
-                and self.y <= position.y <= self.y2)
+    def contains(self, shape: PositionOrRectangle) -> bool:
+        if isinstance(shape, Position):
+            return (self.x <= shape.x <= self.x2
+                    and self.y <= shape.y <= self.y2)
+        elif isinstance(shape, Rectangle):
+            return (self.contains(shape.position)
+                    and self.contains(Position(x=shape.x2, y=shape.y2)))
+        else:
+            raise TypeError
 
     def clamp(self, position: Position) -> Position:
         return Position(x=clamp(self.x, position.x, self.x2),
