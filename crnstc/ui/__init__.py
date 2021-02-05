@@ -1,7 +1,7 @@
 import tcod
 
 from crnstc.geometry import Rectangle, Vector
-from crnstc.ui.layouts import HorizontalLayout, VerticalLayout
+from crnstc.ui.layouts import HorizontalLayout, VerticalLayout, GridLayout
 from crnstc.ui.widgets import Widget, ColorBox, ImageBox
 
 
@@ -27,22 +27,33 @@ class UserInterface:
         ) as context:
             console = context.new_console(order="F")
 
-            # world_pane = ColorBox(min_size=Vector(80, 43))
-            world_pane = ImageBox(
+            title_screen = Widget(layout=GridLayout(3, 3))
+
+            for i in range(4):
+                title_screen.children.append(ColorBox())
+
+            title_screen.children.append(ImageBox(
                 filename="assets/beeple_mike_winkelman_dvde.png",
-                min_size=Vector(80, 43),
-            )
+                min_size=Vector(80, 50),
+                max_size=Vector(80, 50),
+            ))
+
+            for i in range(4):
+                title_screen.children.append(ColorBox())
+
+            world_pane = ColorBox(min_size=Vector(80, 43))
             status_pane = ColorBox()
             log_pane = ColorBox(expansion=(2.0, 1.0))
             info_section = Widget(children=[status_pane, log_pane],
-                                  layout=HorizontalLayout)
+                                  layout=HorizontalLayout())
             main_widget = Widget(children=[world_pane, info_section],
-                                 layout=VerticalLayout)
+                                 layout=VerticalLayout())
 
             while True:
                 # TODO: Render stuff
                 console_shape = Rectangle(0, 0, console.width, console.height)
-                main_widget.render(surface=console, area=console_shape)
+                title_screen.render(surface=console, area=console_shape)
+                # main_widget.render(surface=console, area=console_shape)
                 """
                 for x in range(console.width):
                     for y in range(console.height):

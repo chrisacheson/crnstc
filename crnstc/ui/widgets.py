@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Type
+from typing import List, Optional, Tuple
 from dataclasses import dataclass, field
 import random
 
@@ -11,18 +11,17 @@ from crnstc.ui.layouts import Layout
 
 
 Float2Tuple = Tuple[float, float]
-WidgetList = List["Widget"]
-LayoutClass = Type[Layout]
-OptLayoutClass = Optional[LayoutClass]
-RectangleList = List[Rectangle]
+OptLayout = Optional[Layout]
 OptColor = Optional[Color]
 OptStr = Optional[str]
+RectangleList = List[Rectangle]
+WidgetList = List["Widget"]
 
 
 @dataclass
 class Widget:
     children: WidgetList = field(default_factory=list)
-    layout: OptLayoutClass = None
+    layout: OptLayout = None
     min_size: Vector = Vector(0, 0)
     max_size: Vector = Vector(0, 0)
     expansion: Float2Tuple = (1.0, 1.0)

@@ -1,47 +1,45 @@
 from __future__ import annotations
 
-from typing import List, Iterable, TYPE_CHECKING
+from typing import Iterator, List, Optional, Tuple, TYPE_CHECKING
 import math
-
+from dataclasses import dataclass
 
 from crnstc.geometry import Vector, Rectangle, Position
+from crnstc.utils import sum_or_zero, min_nonzero
 
 if TYPE_CHECKING:
     from crnstc.ui.widgets import Widget
 
-
-RectangleList = List[Rectangle]
-VectorList = List[Vector]
-IntIterable = Iterable[int]
-IntList = List[int]
-DictList = List[dict]
+    RectangleList = List[Rectangle]
+    VectorList = List[Vector]
+    IntList = List[int]
+    Int2Tuple = Tuple[int, int]
+    DictList = List[dict]
+    OptWidget = Optional[Widget]
+    WidgetIterator = Iterator[Widget]
 
 
 class Layout:
-    @classmethod
-    def aggregate_min_size(cls, widget: Widget) -> Vector:
+    def aggregate_min_size(self, widget: Widget) -> Vector:
         raise NotImplementedError
 
-    @classmethod
-    def aggregate_max_size(cls, widget: Widget) -> Vector:
+    def aggregate_max_size(self, widget: Widget) -> Vector:
         raise NotImplementedError
 
-    @classmethod
-    def calculate_layout(cls, widget: Widget,
+    def calculate_layout(self, widget: Widget,
                          area: Rectangle) -> RectangleList:
         raise NotImplementedError
 
 
 class SequentialLayout(Layout):
-    @classmethod
-    def aggregate_min_size(cls, widget: Widget) -> Vector:
+    def aggregate_min_size(self, widget: Widget) -> Vector:
         span_dim: int
         other_dim: int
 
-        if issubclass(cls, HorizontalLayout):
+        if isinstance(self, HorizontalLayout):
             # Child widgets will span the x dimension
             span_dim, other_dim = 0, 1
-        elif issubclass(cls, VerticalLayout):
+        elif isinstance(self, VerticalLayout):
             # Child widgets will span the y dimension
             span_dim, other_dim = 1, 0
         else:
@@ -61,34 +59,18 @@ class SequentialLayout(Layout):
 
         return Vector(*agg_min)
 
-    @classmethod
-    def aggregate_max_size(cls, widget: Widget) -> Vector:
+    def aggregate_max_size(self, widget: Widget) -> Vector:
         span_dim: int
         other_dim: int
 
-        if issubclass(cls, HorizontalLayout):
+        if isinstance(self, HorizontalLayout):
             # Child widgets will span the x dimension
             span_dim, other_dim = 0, 1
-        elif issubclass(cls, VerticalLayout):
+        elif isinstance(self, VerticalLayout):
             # Child widgets will span the y dimension
             span_dim, other_dim = 1, 0
         else:
             raise NotImplementedError
-
-        # Zero is infinity, so a sum including zero is also infinity
-        def sum_or_zero(iterable: IntIterable) -> int:
-            if 0 in iterable:
-                return 0
-            else:
-                return sum(iterable)
-
-        # Ignore zero (infinity) when looking for the smallest value, unless
-        # they're all zero
-        def min_nonzero(iterable: IntIterable) -> int:
-            if any(iterable):
-                return min(i for i in iterable if i != 0)
-            else:
-                return 0
 
         max_sizes: VectorList = [child.aggregate_max_size
                                  for child in widget.children]
@@ -114,16 +96,15 @@ class SequentialLayout(Layout):
 
         return Vector(*agg_max)
 
-    @classmethod
-    def calculate_layout(cls, widget: Widget,
+    def calculate_layout(self, widget: Widget,
                          area: Rectangle) -> RectangleList:
         span_dim: int
         other_dim: int
 
-        if issubclass(cls, HorizontalLayout):
+        if isinstance(self, HorizontalLayout):
             # Child widgets will span the x dimension
             span_dim, other_dim = 0, 1
-        elif issubclass(cls, VerticalLayout):
+        elif isinstance(self, VerticalLayout):
             # Child widgets will span the y dimension
             span_dim, other_dim = 1, 0
         else:
@@ -192,3 +173,210 @@ class HorizontalLayout(SequentialLayout):
 
 class VerticalLayout(SequentialLayout):
     pass
+
+
+@dataclass
+class GridLayout(Layout):
+    widget_columns: int = 2
+    widget_rows: int = 2
+
+    def aggregate_min_size(self, widget: Widget) -> Vector:
+        width = sum(self._column_min_max_width(widget, column)[0]
+                    for column in range(self.widget_columns))
+        height = sum(self._row_min_max_height(widget, row)[0]
+                     for row in range(self.widget_rows))
+        return Vector(dx=width, dy=height)
+
+    def aggregate_max_size(self, widget: Widget) -> Vector:
+        width = sum_or_zero(self._column_min_max_width(widget, column)[1]
+                            for column in range(self.widget_columns))
+        height = sum_or_zero(self._row_min_max_height(widget, row)[1]
+                             for row in range(self.widget_rows))
+        return Vector(dx=width, dy=height)
+
+    def _column_min_max_width(self, widget: Widget, column: int) -> Int2Tuple:
+        minimums: IntList = list()
+        maximums: IntList = list()
+
+        for row in range(self.widget_rows):
+            child: Widget = self.get_child_at_cell(widget=widget,
+                                                   column=column, row=row)
+            minimums.append(child.aggregate_min_size.dx)
+            maximums.append(child.aggregate_max_size.dx)
+
+        min_width: int = max(minimums)
+        max_width: int = min_nonzero(maximums)
+
+        # Maximum can't be smaller than minimum
+        if max_width:
+            max_width = max(min_width, max_width)
+
+        return min_width, max_width
+
+    def _row_min_max_height(self, widget: Widget, row: int) -> Int2Tuple:
+        minimums: IntList = list()
+        maximums: IntList = list()
+
+        for column in range(self.widget_columns):
+            child: Widget = self.get_child_at_cell(widget=widget,
+                                                   column=column, row=row)
+            minimums.append(child.aggregate_min_size.dy)
+            maximums.append(child.aggregate_max_size.dy)
+
+        min_height: int = max(minimums)
+        max_height: int = min_nonzero(maximums)
+
+        # Maximum can't be smaller than minimum
+        if max_height:
+            max_height = max(min_height, max_height)
+
+        return min_height, max_height
+
+    def calculate_layout(self, widget: Widget,
+                         area: Rectangle) -> RectangleList:
+        column_calcs: DictList = list()
+        remaining_width: int = area.dimensions.dx
+        remaining_width_expansion: float = 0.0
+
+        for column in range(self.widget_columns):
+            min_width, max_width = self._column_min_max_width(widget=widget,
+                                                              column=column)
+            remaining_width -= min_width
+            width_expansion = sum(
+                child.expansion[0]
+                for child
+                in self.get_children_in_column(widget=widget, column=column)
+            )
+            remaining_width_expansion += width_expansion
+            column_calcs.append({
+                "column": column,
+                "width": min_width,
+                "max_width": max_width,
+                "width_expansion": width_expansion,
+            })
+
+        if remaining_width > 0:
+            # Sort columns in a way that lets us do everything in one pass
+            def columns_sort_key(calc):
+                # Treat zero as infinite
+                max_width = calc["max_width"] or math.inf
+                # Columns most likely to hit max_width go first
+                primary = max_width / calc["width_expansion"]
+                # Among the remainder, higher expansion goes first
+                secondary = -calc["width_expansion"]
+                return primary, secondary
+            column_calcs.sort(key=columns_sort_key)
+
+            for calc in column_calcs:
+                w_exp: float = calc["width_expansion"]
+                w_percentage: float = w_exp / remaining_width_expansion
+                add_width: int = math.ceil(remaining_width * w_percentage)
+                max_add = (calc["max_width"] or math.inf) - calc["width"]
+                add_width = min(add_width, max_add)
+                calc["width"] += add_width
+                remaining_width -= add_width
+                remaining_width_expansion -= w_exp
+
+            # Put everything back in order
+            column_calcs.sort(key=lambda c: c["column"])
+
+        x = area.position.x
+
+        for calc in column_calcs:
+            calc["x"] = x
+            x += calc["width"]
+
+        row_calcs: DictList = list()
+        remaining_height: int = area.dimensions.dy
+        remaining_height_expansion: float = 0.0
+
+        for row in range(self.widget_rows):
+            min_height, max_height = self._row_min_max_height(widget=widget,
+                                                              row=row)
+            remaining_height -= min_height
+            height_expansion = sum(
+                child.expansion[1]
+                for child
+                in self.get_children_in_row(widget=widget, row=row)
+            )
+            remaining_height_expansion += height_expansion
+            row_calcs.append({
+                "row": row,
+                "height": min_height,
+                "max_height": max_height,
+                "height_expansion": height_expansion,
+            })
+
+        if remaining_height > 0:
+            # Sort rows in a way that lets us do everything in one pass
+            def rows_sort_key(calc):
+                # Treat zero as infinite
+                max_height = calc["max_height"] or math.inf
+                # Rows most likely to hit max_height go first
+                primary = max_height / calc["height_expansion"]
+                # Among the remainder, higher expansion goes first
+                secondary = -calc["height_expansion"]
+                return primary, secondary
+            row_calcs.sort(key=rows_sort_key)
+
+            for calc in row_calcs:
+                h_exp: float = calc["height_expansion"]
+                h_percentage: float = h_exp / remaining_height_expansion
+                add_height: int = math.ceil(remaining_height * h_percentage)
+                max_add = (calc["max_height"] or math.inf) - calc["height"]
+                add_height = min(add_height, max_add)
+                calc["height"] += add_height
+                remaining_height -= add_height
+                remaining_height_expansion -= h_exp
+
+            # Put everything back in order
+            row_calcs.sort(key=lambda c: c["row"])
+
+        y = area.position.y
+
+        for calc in row_calcs:
+            calc["y"] = y
+            y += calc["height"]
+
+        child_areas: RectangleList = list()
+
+        for row in range(self.widget_rows):
+            for column in range(self.widget_columns):
+                column_calc = column_calcs[column]
+                row_calc = row_calcs[row]
+                child_areas.append(Rectangle(x=column_calc["x"],
+                                             y=row_calc["y"],
+                                             w=column_calc["width"],
+                                             h=row_calc["height"]))
+
+        return child_areas
+
+    def get_child_at_cell(self, widget: Widget, column: int,
+                          row: int) -> Widget:
+        index = self.get_index(column=column, row=row)
+        return widget.children[index]
+
+    def get_children_in_row(self, widget: Widget, row: int) -> WidgetIterator:
+        return (widget.children[i] for i in self.get_row_indexes(row=row))
+
+    def get_children_in_column(self, widget: Widget,
+                               column: int) -> WidgetIterator:
+        return (widget.children[i]
+                for i in self.get_column_indexes(column=column))
+
+    def get_cell(self, index: int) -> Int2Tuple:
+        column = index % self.widget_columns
+        row = index // self.widget_columns
+        return column, row
+
+    def get_index(self, column: int, row: int) -> int:
+        return row * self.widget_columns + column
+
+    def get_row_indexes(self, row: int) -> range:
+        return range(self.get_index(column=0, row=row),
+                     self.get_index(column=0, row=row + 1))
+
+    def get_column_indexes(self, column: int) -> range:
+        return range(self.get_index(column=column, row=0),
+                     self.widget_columns * self.widget_rows,
+                     self.widget_columns)
