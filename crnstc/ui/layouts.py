@@ -160,12 +160,12 @@ class GridLayout(Layout):
         min_heights, max_heights = list(), list()
 
         for column in range(self.widget_columns):
-            min_width, max_width = self._column_min_max_width(column)
+            min_width, max_width, _ = self._column_stretchy_width(column)
             min_widths.append(min_width)
             max_widths.append(max_width)
 
         for row in range(self.widget_rows):
-            min_height, max_height = self._row_min_max_height(row)
+            min_height, max_height, _ = self._row_stretchy_height(row)
             min_heights.append(min_height)
             max_heights.append(max_height)
 
@@ -176,48 +176,44 @@ class GridLayout(Layout):
             expansion=self.widget.size.expansion,
         )
 
-    def _column_min_max_width(self, column: int) -> Int2Tuple:
-        minimums: IntList = list()
-        maximums: IntList = list()
-
-        for row in range(self.widget_rows):
-            child: Widget = self.get_child_at_cell(column=column, row=row)
-            minimums.append(child.aggregate_size.min_size.dx)
-            maximums.append(child.aggregate_size.max_size.dx)
-
-        min_width: int = max(minimums)
-        max_width: int = min_nonzero(maximums)
+    def _column_stretchy_width(self, column: int) -> StretchyLength:
+        stretchy_widths = [child.aggregate_size.stretchy_lengths[0]
+                           for child
+                           in self.get_children_in_column(column)]
+        min_width: int = max([s.min_length for s in stretchy_widths])
+        max_width: int = min_nonzero([s.max_length for s in stretchy_widths])
+        expansion: float = sum([s.expansion for s in stretchy_widths])
 
         # Maximum can't be smaller than minimum
         if max_width:
             max_width = max(min_width, max_width)
 
-        return min_width, max_width
+        return StretchyLength(min_length=min_width, max_length=max_width,
+                              expansion=expansion)
 
-    def _row_min_max_height(self, row: int) -> Int2Tuple:
-        minimums: IntList = list()
-        maximums: IntList = list()
-
-        for column in range(self.widget_columns):
-            child: Widget = self.get_child_at_cell(column=column, row=row)
-            minimums.append(child.aggregate_size.min_size.dy)
-            maximums.append(child.aggregate_size.max_size.dy)
-
-        min_height: int = max(minimums)
-        max_height: int = min_nonzero(maximums)
+    def _row_stretchy_height(self, row: int) -> StretchyLength:
+        stretchy_heights = [child.aggregate_size.stretchy_lengths[1]
+                            for child
+                            in self.get_children_in_row(row)]
+        min_height: int = max([s.min_length for s in stretchy_heights])
+        max_height: int = min_nonzero([s.max_length for s in stretchy_heights])
+        expansion: float = sum([s.expansion for s in stretchy_heights])
 
         # Maximum can't be smaller than minimum
         if max_height:
             max_height = max(min_height, max_height)
 
-        return min_height, max_height
+        return StretchyLength(min_length=min_height, max_length=max_height,
+                              expansion=expansion)
 
     def calculate_layout(self, area: Rectangle) -> RectangleList:
         hlines: Line1dList = area.lines[0].allocate(
-            self.get_x_stretchy_items()
+            self._column_stretchy_width(column)
+            for column in range(self.widget_columns)
         )
         vlines: Line1dList = area.lines[1].allocate(
-            self.get_y_stretchy_items()
+            self._row_stretchy_height(row)
+            for row in range(self.widget_rows)
         )
         return Rectangle.multiple_from_lines(horizontal=hlines,
                                              vertical=vlines)
@@ -232,22 +228,6 @@ class GridLayout(Layout):
     def get_children_in_column(self, column: int) -> WidgetIterator:
         return (self.widget.children[i]
                 for i in self.get_column_indexes(column=column))
-
-    def get_x_stretchy_items(self) -> StretchyLengthIterable:
-        for column in range(self.widget_columns):
-            expansion = sum(child.size.expansion[0]
-                            for child
-                            in self.get_children_in_column(column))
-            yield StretchyLength(*self._column_min_max_width(column),
-                                 expansion=expansion)
-
-    def get_y_stretchy_items(self) -> StretchyLengthIterable:
-        for row in range(self.widget_rows):
-            expansion = sum(child.size.expansion[1]
-                            for child
-                            in self.get_children_in_row(row))
-            yield StretchyLength(*self._row_min_max_height(row),
-                                 expansion=expansion)
 
     def get_cell(self, index: int) -> Int2Tuple:
         column = index % self.widget_columns
