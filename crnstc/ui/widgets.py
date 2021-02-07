@@ -1,12 +1,11 @@
-from typing import List, Optional, Tuple
-from dataclasses import dataclass, field
 import random
+from typing import List, Optional, Tuple
 
 from tcod.console import Console
 import tcod.image
 
 from crnstc.color import Color
-from crnstc.geometry import Rectangle, Vector
+from crnstc.geometry import Rectangle, StretchyArea
 from crnstc.ui.layouts import Layout
 
 
@@ -18,15 +17,34 @@ RectangleList = List[Rectangle]
 WidgetList = List["Widget"]
 
 
-@dataclass
 class Widget:
-    children: WidgetList = field(default_factory=list)
-    layout: OptLayout = None
-    min_size: Vector = Vector(0, 0)
-    max_size: Vector = Vector(0, 0)
-    expansion: Float2Tuple = (1.0, 1.0)
+    """
+    Basic user interface building block. This is the base class that other
+    widgets inherit from, but by itself it only acts as a placeholder or a
+    container for child widgets. Subclasses can override the
+    render_before_children() and render_after_children() methods in order to
+    draw on the screen.
 
-    def __post_init__(self) -> None:
+    """
+    def __init__(self, children: WidgetList = None, layout: OptLayout = None,
+                 size: StretchyArea = None):
+        """
+        Args:
+            children: Optional list of widgets to be used as the children of
+                this widget.
+            layout: Optional Layout object for determining placement of child
+                widgets within this widget's rendering area. If unspecified,
+                child widgets will not be rendered.
+            size: Optional StretchyArea object describing how this widget
+                should be sized. If unspecified, the widget will have no
+                minimum or maximum size, and will have horizontal and vertical
+                expansion weights of 1.0.
+
+        """
+        self.children = children or list()
+        self.layout = layout
+        self.size: StretchyArea = size or StretchyArea()
+
         # The area that the last call to render() requested we use for
         # rendering
         self.requested_area: Rectangle = Rectangle(0, 0, 0, 0)
@@ -34,30 +52,44 @@ class Widget:
         self.actual_area: Rectangle = Rectangle(0, 0, 0, 0)
 
     @property
-    def aggregate_min_size(self) -> Vector:
-        if self.layout:
-            return self.layout.aggregate_min_size(self)
-        else:
-            return self.min_size
+    def layout(self) -> OptLayout:
+        """The widget's Layout object."""
+        return self._layout
+
+    @layout.setter
+    def layout(self, value: OptLayout):
+        self._layout = value
+
+        if self._layout:
+            self._layout.widget = self
 
     @property
-    def aggregate_max_size(self) -> Vector:
+    def aggregate_size(self) -> StretchyArea:
+        """The size parameters of this widget and its children."""
         if self.layout:
-            return self.layout.aggregate_max_size(self)
+            return self.layout.aggregate_size
         else:
-            return self.max_size
+            return self.size
 
     def render(self, surface: Console, area: Rectangle) -> None:
+        """
+        Draw the widget. Subclasses should override render_before_children() or
+        render_after_children() instead of this method.
+
+        Args:
+            surface: The console to draw on.
+            area: The area of the console that the widget should be drawn into.
+                If this is smaller than the widget's aggregate minimum size,
+                the widget will overflow the boundary.
+
+        """
         child_areas: RectangleList
 
         if area != self.requested_area:
             # Area changed, recompute layout
             self.requested_area = area
 
-            if self.layout:
-                min_size = self.layout.aggregate_min_size(self)
-            else:
-                min_size = self.min_size
+            min_size = self.aggregate_size.min_size
 
             # Enforce min_size
             self.actual_area = Rectangle(
@@ -68,8 +100,7 @@ class Widget:
 
             if self.layout:
                 child_areas = self.layout.calculate_layout(
-                    widget=self,
-                    area=self.actual_area,
+                    area=self.actual_area
                 )
         else:
             child_areas = [child.requested_area for child in self.children]
@@ -87,6 +118,13 @@ class Widget:
         """
         Virtual method called before this widget's child widgets are rendered.
 
+        Args:
+            surface: The console to draw on.
+            area: The area of the console that the widget should be drawn into.
+                This will be at least as large as the widget's aggregate
+                minimum size, though it may be larger than the aggregate
+                maximum.
+
         """
         return
 
@@ -95,13 +133,40 @@ class Widget:
         """
         Virtual method called after this widget's child widgets are rendered.
 
+        Args:
+            surface: The console to draw on.
+            area: The area of the console that the widget should be drawn into.
+                This will be at least as large as the widget's aggregate
+                minimum size, though it may be larger than the aggregate
+                maximum.
+
         """
         return
 
 
-@dataclass
 class ColorBox(Widget):
-    color: OptColor = None
+    """
+    A simple colored box. Useful for testing layouts.
+
+    """
+    def __init__(self, children: WidgetList = None, layout: OptLayout = None,
+                 size: StretchyArea = None, color: OptColor = None):
+        """
+        Args:
+            children: Optional list of widgets to be used as the children of
+                this widget.
+            layout: Optional Layout object for determining placement of child
+                widgets within this widget's rendering area. If unspecified,
+                child widgets will not be rendered.
+            size: Optional StretchyArea object describing how this widget
+                should be sized. If unspecified, the widget will have no
+                minimum or maximum size, and will have horizontal and vertical
+                expansion weights of 1.0.
+            color: Optional color for this widget. Defaults to a random color.
+
+        """
+        super().__init__(children, layout, size)
+        self.color = color
 
     def render_before_children(self, surface: Console,
                                area: Rectangle) -> None:
@@ -115,12 +180,29 @@ class ColorBox(Widget):
         surface.draw_rect(*area, ch=ord(" "), bg=self.color)
 
 
-@dataclass
 class ImageBox(Widget):
-    filename: OptStr = None
+    """
+    A widget that displays a semigraphics image.
 
-    def __post_init__(self):
-        super().__post_init__()
+    """
+    def __init__(self, children: WidgetList = None, layout: OptLayout = None,
+                 size: StretchyArea = None, filename: OptStr = None):
+        """
+        Args:
+            children: Optional list of widgets to be used as the children of
+                this widget.
+            layout: Optional Layout object for determining placement of child
+                widgets within this widget's rendering area. If unspecified,
+                child widgets will not be rendered.
+            size: Optional StretchyArea object describing how this widget
+                should be sized. If unspecified, the widget will have no
+                minimum or maximum size, and will have horizontal and vertical
+                expansion weights of 1.0.
+            filename: Optional image file path. Defaults to None.
+
+        """
+        super().__init__(children, layout, size)
+        self.filename = filename
         self._filename: OptStr = None
 
     def render_before_children(self, surface: Console,
