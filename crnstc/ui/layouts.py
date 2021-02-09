@@ -66,12 +66,12 @@ class HorizontalLayout(Layout):
                                              *self.widget.size.expansion)
 
     def calculate_layout(self, area: Rectangle) -> RectangleList:
-        stretchy_lengths: StretchyLengthIterable = (
-            child.aggregate_size.stretchy_lengths[0]
+        stretchy_widths: StretchyLengthIterable = (
+            child.aggregate_size.stretchy_width
             for child in self.widget.children
         )
         return Rectangle.multiple_from_lines(
-            horizontal=area.horizontal_line.allocate(stretchy_lengths),
+            horizontal=area.horizontal_line.allocate(stretchy_widths),
             vertical=(area.vertical_line,),
         )
 
@@ -96,13 +96,13 @@ class VerticalLayout(Layout):
                                              *self.widget.size.expansion)
 
     def calculate_layout(self, area: Rectangle) -> RectangleList:
-        stretchy_lengths: StretchyLengthIterable = (
-            child.aggregate_size.stretchy_lengths[1]
+        stretchy_heights: StretchyLengthIterable = (
+            child.aggregate_size.stretchy_height
             for child in self.widget.children
         )
         return Rectangle.multiple_from_lines(
             horizontal=(area.horizontal_line,),
-            vertical=area.vertical_line.allocate(stretchy_lengths),
+            vertical=area.vertical_line.allocate(stretchy_heights),
         )
 
 
@@ -136,14 +136,14 @@ class GridLayout(Layout):
                                              *self.widget.size.expansion)
 
     def _column_stretchy_width(self, column: int) -> StretchyLength:
-        stretchy_widths = [child.aggregate_size.stretchy_lengths[0]
+        stretchy_widths = [child.aggregate_size.stretchy_width
                            for child
                            in self.get_children_in_column(column)]
         expansion: float = sum([s.expansion for s in stretchy_widths])
         return StretchyLength.most_restrictive(stretchy_widths, expansion)
 
     def _row_stretchy_height(self, row: int) -> StretchyLength:
-        stretchy_heights = [child.aggregate_size.stretchy_lengths[1]
+        stretchy_heights = [child.aggregate_size.stretchy_height
                             for child
                             in self.get_children_in_row(row)]
         expansion: float = sum([s.expansion for s in stretchy_heights])
