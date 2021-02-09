@@ -1,5 +1,5 @@
 import random
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from tcod.console import Console
 import tcod.image
@@ -9,7 +9,6 @@ from crnstc.geometry import Rectangle, StretchyArea
 from crnstc.ui.layouts import Layout
 
 
-Float2Tuple = Tuple[float, float]
 OptLayout = Optional[Layout]
 OptColor = Optional[Color]
 OptStr = Optional[str]
@@ -89,13 +88,13 @@ class Widget:
             # Area changed, recompute layout
             self.requested_area = area
 
-            min_size = self.aggregate_size.min_size
+            agg_size = self.aggregate_size
 
             # Enforce min_size
             self.actual_area = Rectangle(
                 *area.position,
-                w=max(area.w, min_size.dx),
-                h=max(area.h, min_size.dy),
+                w=max(area.w, agg_size.min_width),
+                h=max(area.h, agg_size.min_height),
             )
 
             if self.layout:

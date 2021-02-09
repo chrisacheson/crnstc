@@ -1,22 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, List, Optional, Tuple, TYPE_CHECKING
+from typing import Iterator, List, Tuple, TYPE_CHECKING
 
-from crnstc.geometry import (Line1dList, Rectangle, StretchyArea,
-                             StretchyLength, StretchyLengthIterable, Vector)
-from crnstc.utils import min_nonzero, sum_or_zero
+from crnstc.geometry import (Line1d, Line1dList, Rectangle, StretchyArea,
+                             StretchyLength, StretchyLengthIterable)
 
 if TYPE_CHECKING:
     from crnstc.ui.widgets import Widget
 
-    DictList = List[dict]
     Int2Tuple = Tuple[int, int]
-    IntList = List[int]
-    OptWidget = Optional[Widget]
     RectangleList = List[Rectangle]
-    StretchyAreaList = List[StretchyArea]
-    VectorList = List[Vector]
     WidgetIterator = Iterator[Widget]
 
 
@@ -52,90 +46,63 @@ class Layout:
         raise NotImplementedError
 
 
-class SequentialLayout(Layout):
-    """
-    Base class for HorizontalLayout and VerticalLayout.
-
-    """
-    @property
-    def aggregate_size(self) -> StretchyArea:
-        span_dim: int
-        other_dim: int
-
-        if isinstance(self, HorizontalLayout):
-            # Child widgets will span the x dimension
-            span_dim, other_dim = 0, 1
-        elif isinstance(self, VerticalLayout):
-            # Child widgets will span the y dimension
-            span_dim, other_dim = 1, 0
-        else:
-            raise NotImplementedError
-
-        sizes: StretchyAreaList = [child.aggregate_size
-                                   for child in self.widget.children]
-
-        agg_min: IntList = [0, 0]
-        agg_min[span_dim] = sum(size.min_size[span_dim] for size in sizes)
-        agg_min[other_dim] = max(size.min_size[other_dim] for size in sizes)
-
-        agg_max: IntList = [0, 0]
-        agg_max[span_dim] = sum_or_zero(size.max_size[span_dim]
-                                        for size in sizes)
-        agg_max[other_dim] = min_nonzero(size.max_size[span_dim]
-                                         for size in sizes)
-
-        wsize = self.widget.size
-        # Check if the min size of the parent widget is larger than the min
-        # size of its children
-        agg_min[span_dim] = max(agg_min[span_dim], wsize.min_size[span_dim])
-        agg_min[other_dim] = max(agg_min[other_dim], wsize.min_size[other_dim])
-
-        # Check if the max size of the parent widget is smaller than the max
-        # size of its children
-        agg_max[span_dim] = min_nonzero((agg_max[span_dim],
-                                         wsize.max_size[span_dim]))
-        agg_max[other_dim] = min_nonzero((agg_max[other_dim],
-                                          wsize.max_size[other_dim]))
-
-        # Aggregate max size can't be smaller than aggregate min size
-        for dim, value in enumerate(agg_max):
-            if value:
-                agg_max[dim] = max(value, agg_min[dim])
-
-        return StretchyArea(min_size=Vector(*agg_min),
-                            max_size=Vector(*agg_max),
-                            expansion=self.widget.size.expansion)
-
-
-class HorizontalLayout(SequentialLayout):
+class HorizontalLayout(Layout):
     """
     Places child widgets side by side in the attached widget's rendering area.
 
     """
+    @property
+    def aggregate_size(self) -> StretchyArea:
+        stretchy_width = StretchyLength.sum(
+            child.aggregate_size.stretchy_width
+            for child in self.widget.children
+        )
+        stretchy_height = StretchyLength.most_restrictive(
+            child.aggregate_size.stretchy_height
+            for child in self.widget.children
+        )
+        agg_size = StretchyArea(*stretchy_width, *stretchy_height)
+        return StretchyArea.most_restrictive((agg_size, self.widget.size),
+                                             *self.widget.size.expansion)
+
     def calculate_layout(self, area: Rectangle) -> RectangleList:
         stretchy_lengths: StretchyLengthIterable = (
             child.aggregate_size.stretchy_lengths[0]
             for child in self.widget.children
         )
         return Rectangle.multiple_from_lines(
-            horizontal=area.lines[0].allocate(stretchy_lengths),
-            vertical=(area.lines[1],),
+            horizontal=area.horizontal_line.allocate(stretchy_lengths),
+            vertical=(area.vertical_line,),
         )
 
 
-class VerticalLayout(SequentialLayout):
+class VerticalLayout(Layout):
     """
     Stacks child widgets vertically in the attached widget's rendering area.
 
     """
+    @property
+    def aggregate_size(self) -> StretchyArea:
+        stretchy_width = StretchyLength.most_restrictive(
+            child.aggregate_size.stretchy_width
+            for child in self.widget.children
+        )
+        stretchy_height = StretchyLength.sum(
+            child.aggregate_size.stretchy_height
+            for child in self.widget.children
+        )
+        agg_size = StretchyArea(*stretchy_width, *stretchy_height)
+        return StretchyArea.most_restrictive((agg_size, self.widget.size),
+                                             *self.widget.size.expansion)
+
     def calculate_layout(self, area: Rectangle) -> RectangleList:
         stretchy_lengths: StretchyLengthIterable = (
             child.aggregate_size.stretchy_lengths[1]
             for child in self.widget.children
         )
         return Rectangle.multiple_from_lines(
-            horizontal=(area.lines[0],),
-            vertical=area.lines[1].allocate(stretchy_lengths),
+            horizontal=(area.horizontal_line,),
+            vertical=area.vertical_line.allocate(stretchy_lengths),
         )
 
 
@@ -156,62 +123,38 @@ class GridLayout(Layout):
 
     @property
     def aggregate_size(self) -> StretchyArea:
-        min_widths, max_widths = list(), list()
-        min_heights, max_heights = list(), list()
-
-        for column in range(self.widget_columns):
-            min_width, max_width, _ = self._column_stretchy_width(column)
-            min_widths.append(min_width)
-            max_widths.append(max_width)
-
-        for row in range(self.widget_rows):
-            min_height, max_height, _ = self._row_stretchy_height(row)
-            min_heights.append(min_height)
-            max_heights.append(max_height)
-
-        return StretchyArea(
-            min_size=Vector(dx=sum(min_widths), dy=sum(min_heights)),
-            max_size=Vector(dx=sum_or_zero(max_widths),
-                            dy=sum_or_zero(max_heights)),
-            expansion=self.widget.size.expansion,
+        stretchy_width = StretchyLength.sum(
+            self._column_stretchy_width(column)
+            for column in range(self.widget_columns)
         )
+        stretchy_height = StretchyLength.sum(
+            self._row_stretchy_height(row)
+            for row in range(self.widget_rows)
+        )
+        agg_size = StretchyArea(*stretchy_width, *stretchy_height)
+        return StretchyArea.most_restrictive((agg_size, self.widget.size),
+                                             *self.widget.size.expansion)
 
     def _column_stretchy_width(self, column: int) -> StretchyLength:
         stretchy_widths = [child.aggregate_size.stretchy_lengths[0]
                            for child
                            in self.get_children_in_column(column)]
-        min_width: int = max([s.min_length for s in stretchy_widths])
-        max_width: int = min_nonzero([s.max_length for s in stretchy_widths])
         expansion: float = sum([s.expansion for s in stretchy_widths])
-
-        # Maximum can't be smaller than minimum
-        if max_width:
-            max_width = max(min_width, max_width)
-
-        return StretchyLength(min_length=min_width, max_length=max_width,
-                              expansion=expansion)
+        return StretchyLength.most_restrictive(stretchy_widths, expansion)
 
     def _row_stretchy_height(self, row: int) -> StretchyLength:
         stretchy_heights = [child.aggregate_size.stretchy_lengths[1]
                             for child
                             in self.get_children_in_row(row)]
-        min_height: int = max([s.min_length for s in stretchy_heights])
-        max_height: int = min_nonzero([s.max_length for s in stretchy_heights])
         expansion: float = sum([s.expansion for s in stretchy_heights])
-
-        # Maximum can't be smaller than minimum
-        if max_height:
-            max_height = max(min_height, max_height)
-
-        return StretchyLength(min_length=min_height, max_length=max_height,
-                              expansion=expansion)
+        return StretchyLength.most_restrictive(stretchy_heights, expansion)
 
     def calculate_layout(self, area: Rectangle) -> RectangleList:
-        hlines: Line1dList = area.lines[0].allocate(
+        hlines: Line1dList = area.horizontal_line.allocate(
             self._column_stretchy_width(column)
             for column in range(self.widget_columns)
         )
-        vlines: Line1dList = area.lines[1].allocate(
+        vlines: Line1dList = area.vertical_line.allocate(
             self._row_stretchy_height(row)
             for row in range(self.widget_rows)
         )
@@ -245,3 +188,53 @@ class GridLayout(Layout):
         return range(self.get_index(column=column, row=0),
                      self.widget_columns * self.widget_rows,
                      self.widget_columns)
+
+
+class PaddingLayout(Layout):
+    """
+    Place a single child widget within the attached widget's rendering area at
+    a location determined by the specified padding values.
+
+    """
+    def __init__(self, all_sides: StretchyLength = StretchyLength(),
+                 left: StretchyLength = None,
+                 right: StretchyLength = None,
+                 top: StretchyLength = None,
+                 bottom: StretchyLength = None):
+        """
+        Args:
+            all_sides: Padding to apply to any unspecified side.
+            left: Padding to the left of the child widget.
+            right: Padding to the right of the child widget.
+            top: Padding above the child widget.
+            bottom: Padding below the child widget.
+
+        """
+        super().__init__()
+        self.left = left or all_sides
+        self.right = right or all_sides
+        self.top = top or all_sides
+        self.bottom = bottom or all_sides
+
+    @property
+    def aggregate_size(self) -> StretchyArea:
+        child = self.widget.children[0]
+        stretchy_width = StretchyLength.sum((self.left,
+                                             child.size.stretchy_width,
+                                             self.right))
+        stretchy_height = StretchyLength.sum((self.top,
+                                              child.size.stretchy_height,
+                                              self.bottom))
+        agg_size = StretchyArea(*stretchy_width, *stretchy_height)
+        return StretchyArea.most_restrictive((agg_size, self.widget.size),
+                                             *self.widget.size.expansion)
+
+    def calculate_layout(self, area: Rectangle) -> RectangleList:
+        child = self.widget.children[0]
+        horizontal: Line1d = area.horizontal_line.allocate(
+            (self.left, child.size.stretchy_width, self.right)
+        )[1]
+        vertical: Line1d = area.vertical_line.allocate(
+            (self.top, child.size.stretchy_height, self.bottom)
+        )[1]
+        return [Rectangle.from_lines(horizontal=horizontal, vertical=vertical)]

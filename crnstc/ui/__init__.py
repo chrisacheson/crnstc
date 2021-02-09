@@ -1,7 +1,7 @@
 import tcod
 
-from crnstc.geometry import Rectangle, StretchyArea, Vector
-from crnstc.ui.layouts import GridLayout, HorizontalLayout, VerticalLayout
+from crnstc.geometry import Rectangle, StretchyArea
+from crnstc.ui.layouts import HorizontalLayout, VerticalLayout, PaddingLayout
 from crnstc.ui.widgets import ColorBox, ImageBox, Widget
 
 
@@ -27,23 +27,17 @@ class UserInterface:
         ) as context:
             console = context.new_console(order="F")
 
-            title_screen = Widget(layout=GridLayout(3, 3))
-
-            for i in range(4):
-                title_screen.children.append(ColorBox())
-
+            title_screen = Widget(layout=PaddingLayout())
             title_screen.children.append(ImageBox(
                 filename="assets/beeple_mike_winkelman_dvde.png",
-                size=StretchyArea(min_size=Vector(80, 50),
-                                  max_size=Vector(80, 50)),
+                size=StretchyArea.fixed(80, 50),
             ))
 
-            for i in range(4):
-                title_screen.children.append(ColorBox())
-
-            world_pane = ColorBox(size=StretchyArea(min_size=Vector(80, 43)))
+            world_pane = ColorBox(size=StretchyArea(min_width=80,
+                                                    min_height=43))
             status_pane = ColorBox()
-            log_pane = ColorBox(size=StretchyArea(expansion=(2.0, 1.0)))
+            log_pane = ColorBox(size=StretchyArea(width_expansion=2.0,
+                                                  height_expansion=1.0))
             info_section = Widget(children=[status_pane, log_pane],
                                   layout=HorizontalLayout())
             main_widget = Widget(children=[world_pane, info_section],

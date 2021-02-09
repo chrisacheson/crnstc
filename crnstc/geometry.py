@@ -7,12 +7,14 @@ from crnstc.utils import clamp
 
 
 Float2Tuple = Tuple[float, float]
+IntAsFloat = float
 Line1d2Tuple = Tuple["Line1d", "Line1d"]
 Line1dIterable = Iterable["Line1d"]
 Line1dList = List["Line1d"]
 PositionOrVector = Union["Position", "Vector"]
 PositionOrRectangle = Union["Position", "Rectangle"]
 RectangleList = List["Rectangle"]
+StretchyAreaIterable = Iterable["StretchyArea"]
 StretchyLength2Tuple = Tuple["StretchyLength", "StretchyLength"]
 StretchyLengthIterable = Iterable["StretchyLength"]
 
@@ -138,8 +140,25 @@ class Rectangle(NamedTuple):
         a (horizontal, vertical) tuple.
 
         """
-        return (Line1d(position=self.x, length=self.w),
-                Line1d(position=self.y, length=self.h))
+        return self.horizontal_line, self.vertical_line
+
+    @property
+    def horizontal_line(self) -> "Line1d":
+        """
+        The 1-dimensional line segment forming the horizontal sides of this
+        rectangle.
+
+        """
+        return Line1d(position=self.x, length=self.w)
+
+    @property
+    def vertical_line(self) -> "Line1d":
+        """
+        The 1-dimensional line segment forming the vertical sides of this
+        rectangle.
+
+        """
+        return Line1d(position=self.y, length=self.h)
 
     @property
     def center(self) -> Position:
@@ -305,10 +324,8 @@ class Line1d(NamedTuple):
         if remaining_length > 0:
             # Sort items in a way that lets us do everything in one pass
             def calcs_sort_key(calc):
-                # Treat zero as infinite
-                max_length = calc.stretchy.max_length or math.inf
                 # Items most likely to hit max_length go first
-                primary = max_length / calc.stretchy.expansion
+                primary = calc.stretchy.max_length / calc.stretchy.expansion
                 # Among the remainder, higher expansion goes first
                 secondary = -calc.stretchy.expansion
                 return primary, secondary
@@ -318,7 +335,7 @@ class Line1d(NamedTuple):
                 s: StretchyLength = calc.stretchy
                 percentage: float = s.expansion / remaining_expansion
                 add_length: int = math.ceil(remaining_length * percentage)
-                max_add = (s.max_length or math.inf) - calc.length
+                max_add = s.max_length - calc.length
                 add_length = min(add_length, max_add)
                 calc.length += add_length
                 remaining_length -= add_length
@@ -342,16 +359,82 @@ class StretchyLength(NamedTuple):
     A 1-dimensional length of variable size.
 
     Args:
-        min_length: The lower bound of the length.
-        max_length: The upper bound of the length. Zero means no upper bound.
+        min_length: The lower bound of the length. Defaults to zero.
+        max_length: The upper bound of the length. Defaults to infinity.
         expansion: The expansion weight of the length. Used to determine
             allocation of extra space among a collection of StretchyLength
-            objects.
+            objects. Defaults to 1.0.
 
     """
-    min_length: int
-    max_length: int
-    expansion: float
+    min_length: int = 0
+    max_length: IntAsFloat = math.inf
+    expansion: float = 1.0
+
+    @classmethod
+    def fixed(cls, length: int) -> "StretchyLength":
+        """
+        Create a StretchyLength with a fixed size.
+
+        Args:
+            length: Minimum and maximum length.
+
+        Returns:
+            The new length.
+
+        """
+        return cls(min_length=length, max_length=length, expansion=1.0)
+
+    @classmethod
+    def sum(cls, stretchy_lengths: StretchyLengthIterable,
+            expansion: float = 1.0) -> "StretchyLength":
+        """
+        Combine multiple StretchyLength objects into one.
+
+        Args:
+            stretchy_lengths: The lengths to combine.
+            expansion: Expansion weight of the new length. Defaults to 1.0.
+
+        Returns:
+            The combined length.
+
+        """
+        min_length: int = 0
+        max_length: IntAsFloat = 0
+
+        for stretchy in stretchy_lengths:
+            min_length += stretchy.min_length
+            max_length += stretchy.max_length
+
+        return cls(min_length=min_length, max_length=max_length,
+                   expansion=expansion)
+
+    @classmethod
+    def most_restrictive(cls, stretchy_lengths: StretchyLengthIterable,
+                         expansion: float = 1.0) -> "StretchyLength":
+        """
+        Create a new StretchyLength using the largest min_length and smallest
+        max_length among a collection of other StretchyLength objects.
+
+        Args:
+            stretchy_lengths: The lengths to use.
+            expansion: Expansion weight of the new length. Defaults to 1.0.
+
+        Returns:
+            The new length.
+
+        """
+        min_length: int = 0
+        max_length: IntAsFloat = math.inf
+
+        for stretchy in stretchy_lengths:
+            min_length = max(min_length, stretchy.min_length)
+            max_length = min(max_length, stretchy.max_length)
+
+        # max_length can't be smaller than min_length
+        max_length = max(min_length, max_length)
+
+        return cls(min_length=min_length, max_length=max_length,
+                   expansion=expansion)
 
 
 class StretchyArea(NamedTuple):
@@ -359,18 +442,32 @@ class StretchyArea(NamedTuple):
     A rectangular area of variable size.
 
     Args:
-        min_size: A vector representing the minimum width and height of the
-            area.
-        max_size: A vector representing the maximum width and height of the
-            area. If either dimension is zero, that dimension has no maximum.
-        expansion: The expansion weights of the area's width and height. Used
-            to determine allocation of extra space among a collection of
-            StretchyArea objects.
+        min_width: The lower bound of the width. Defaults to zero.
+        max_width: The upper bound of the width. Defaults to infinity.
+        width_expansion: The expansion weight of the width. Used to determine
+            allocation of extra horizontal space among a collection of
+            StretchyArea objects. Defaults to 1.0.
+        min_height: The lower bound of the height. Defaults to zero.
+        max_height: The upper bound of the height. Defaults to infinity.
+        height_expansion: The expansion weight of the height. Used to determine
+            allocation of extra vertical space among a collection of
+            StretchyArea objects. Defaults to 1.0.
 
     """
-    min_size: Vector = Vector(0, 0)
-    max_size: Vector = Vector(0, 0)
-    expansion: Float2Tuple = (1.0, 1.0)
+    min_width: int = 0
+    max_width: IntAsFloat = math.inf
+    width_expansion: float = 1.0
+    min_height: int = 0
+    max_height: IntAsFloat = math.inf
+    height_expansion: float = 1.0
+
+    @property
+    def expansion(self) -> Float2Tuple:
+        """
+        Width and height expansion weights as a (width, height) tuple.
+
+        """
+        return self.width_expansion, self.height_expansion
 
     @property
     def stretchy_lengths(self) -> StretchyLength2Tuple:
@@ -379,11 +476,80 @@ class StretchyArea(NamedTuple):
         vertical) tuple.
 
         """
-        return (
-            StretchyLength(min_length=self.min_size[0],
-                           max_length=self.max_size[0],
-                           expansion=self.expansion[0]),
-            StretchyLength(min_length=self.min_size[1],
-                           max_length=self.max_size[1],
-                           expansion=self.expansion[1]),
-        )
+        return self.stretchy_width, self.stretchy_height
+
+    @property
+    def stretchy_width(self) -> StretchyLength:
+        """
+        StretchyLength representing the width of this area.
+
+        """
+        return StretchyLength(min_length=self.min_width,
+                              max_length=self.max_width,
+                              expansion=self.width_expansion)
+
+    @property
+    def stretchy_height(self) -> StretchyLength:
+        """
+        StretchyLength representing the height of this area.
+
+        """
+        return StretchyLength(min_length=self.min_height,
+                              max_length=self.max_height,
+                              expansion=self.height_expansion)
+
+    @classmethod
+    def fixed(cls, width: int, height: int) -> "StretchyArea":
+        """
+        Create a StretchyArea with a fixed size.
+
+        Args:
+            width: Minimum and maximum width.
+            height: Minimum and maximum height.
+
+        Returns:
+            The new area.
+
+        """
+        return cls(min_width=width, max_width=width, width_expansion=1.0,
+                   min_height=height, max_height=height, height_expansion=1.0)
+
+    @classmethod
+    def most_restrictive(cls, stretchy_areas: StretchyAreaIterable,
+                         width_expansion: float = 1.0,
+                         height_expansion: float = 1.0) -> "StretchyArea":
+        """
+        Create a new StretchyArea using the largest min_width/min_height and
+        smallest max_width/max_height among a collection of other StretchyArea
+        objects.
+
+        Args:
+            stretchy_areas: The areas to use.
+            width_expansion: Width expansion weight of the new area. Defaults
+                to 1.0.
+            height_expansion: Height expansion weight of the new area. Defaults
+                to 1.0.
+
+        Returns:
+            The new area.
+
+        """
+        min_width: int = 0
+        max_width: IntAsFloat = math.inf
+        min_height: int = 0
+        max_height: IntAsFloat = math.inf
+
+        for stretchy in stretchy_areas:
+            min_width = max(min_width, stretchy.min_width)
+            max_width = min(max_width, stretchy.max_width)
+            min_height = max(min_height, stretchy.min_height)
+            max_height = min(max_height, stretchy.max_height)
+
+        # max_width/min_height can't be smaller than min_width/min_height
+        max_width = max(min_width, max_width)
+        max_height = max(min_height, max_height)
+
+        return cls(min_width=min_width, max_width=max_width,
+                   width_expansion=width_expansion,
+                   min_height=min_height, max_height=max_height,
+                   height_expansion=height_expansion)
