@@ -226,3 +226,54 @@ class ImageBox(Widget):
 
         self._image_console.blit(surface, *area.position, 0, 0,
                                  *area.dimensions)
+
+
+class TextBox(Widget):
+    """
+    A box for displaying text.
+
+    """
+    def __init__(self, children: WidgetList = None, layout: OptLayout = None,
+                 size: StretchyArea = None, text: OptStr = None,
+                 text_color: OptColor = None, bg_color: OptColor = None,
+                 bg_blend: int = tcod.BKGND_SET):
+        """
+        Args:
+            children: Optional list of widgets to be used as the children of
+                this widget.
+            layout: Optional Layout object for determining placement of child
+                widgets within this widget's rendering area. If unspecified,
+                child widgets will not be rendered.
+            size: Optional StretchyArea object describing how this widget
+                should be sized. If unspecified, the widget will have no
+                minimum or maximum size, and will have horizontal and vertical
+                expansion weights of 1.0.
+            text: The text to display. If unspecified, the TextBox will be
+                blank.
+            text_color: The color of the displayed text. If unspecified, the
+                current foreground color of the tiles written to will be left
+                unchanged.
+            bg_color: Background color of the text box. If unspecified, the
+                current background color of the tiles written to will be left
+                unchanged.
+            bg_blend: A tcod blending mode to use for the background color.
+                Defaults to tcod.BKGND_SET, which will overwrite the existing
+                background color.
+
+        """
+        super().__init__(children, layout, size)
+        self.text = text
+        self.text_color = text_color
+        self.bg_color = bg_color
+        self.bg_blend = bg_blend
+
+    def render_before_children(self, surface: Console,
+                               area: Rectangle) -> None:
+        super().render_before_children(surface=surface, area=area)
+
+        if self.bg_color:
+            surface.draw_rect(*area, ch=ord(" "), bg=self.bg_color,
+                              bg_blend=self.bg_blend)
+
+        if self.text:
+            surface.print_box(*area, string=self.text, fg=self.text_color)

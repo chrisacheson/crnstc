@@ -2,6 +2,7 @@ import tcod
 
 from crnstc.geometry import Rectangle, StretchyArea
 from crnstc.ui.layouts import HorizontalLayout, VerticalLayout, PaddingLayout
+from crnstc.ui.pages import TitleScreen
 from crnstc.ui.widgets import ColorBox, ImageBox, Widget
 
 
@@ -27,11 +28,7 @@ class UserInterface:
         ) as context:
             console = context.new_console(order="F")
 
-            title_screen = Widget(layout=PaddingLayout())
-            title_screen.children.append(ImageBox(
-                filename="assets/beeple_mike_winkelman_dvde.png",
-                size=StretchyArea.fixed(80, 50),
-            ))
+            title_screen = TitleScreen(game_name=game_name)
 
             world_pane = ColorBox(size=StretchyArea(min_width=80,
                                                     min_height=43))
