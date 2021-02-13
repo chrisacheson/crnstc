@@ -1,19 +1,21 @@
 import random
-from typing import List, Optional
+from typing import Iterable, List, NamedTuple, Optional
 
 from tcod.console import Console
 import tcod.image
 
 from crnstc.color import Color
 from crnstc.geometry import Rectangle, StretchyArea
+from crnstc.ui.input import InputCallback, InputReceiverMixin, KeyStroke
 from crnstc.ui.layouts import Layout
 
 
-OptLayout = Optional[Layout]
-OptColor = Optional[Color]
-OptStr = Optional[str]
+ColorOpt = Optional[Color]
+LayoutOpt = Optional[Layout]
 RectangleList = List[Rectangle]
-WidgetList = List["Widget"]
+StrList = List[str]
+StrOpt = Optional[str]
+StretchyAreaOpt = Optional[StretchyArea]
 
 
 class Widget:
@@ -25,8 +27,8 @@ class Widget:
     draw on the screen.
 
     """
-    def __init__(self, children: WidgetList = None, layout: OptLayout = None,
-                 size: StretchyArea = None):
+    def __init__(self, children: "WidgetListOpt" = None,
+                 layout: LayoutOpt = None, size: StretchyAreaOpt = None):
         """
         Args:
             children: Optional list of widgets to be used as the children of
@@ -51,12 +53,12 @@ class Widget:
         self.actual_area: Rectangle = Rectangle(0, 0, 0, 0)
 
     @property
-    def layout(self) -> OptLayout:
+    def layout(self) -> LayoutOpt:
         """The widget's Layout object."""
         return self._layout
 
     @layout.setter
-    def layout(self, value: OptLayout):
+    def layout(self, value: LayoutOpt):
         self._layout = value
 
         if self._layout:
@@ -143,13 +145,18 @@ class Widget:
         return
 
 
+WidgetList = List[Widget]
+WidgetListOpt = Optional[WidgetList]
+
+
 class ColorBox(Widget):
     """
     A simple colored box. Useful for testing layouts.
 
     """
-    def __init__(self, children: WidgetList = None, layout: OptLayout = None,
-                 size: StretchyArea = None, color: OptColor = None):
+    def __init__(self, children: WidgetListOpt = None,
+                 layout: LayoutOpt = None, size: StretchyAreaOpt = None,
+                 color: ColorOpt = None):
         """
         Args:
             children: Optional list of widgets to be used as the children of
@@ -184,8 +191,9 @@ class ImageBox(Widget):
     A widget that displays a semigraphics image.
 
     """
-    def __init__(self, children: WidgetList = None, layout: OptLayout = None,
-                 size: StretchyArea = None, filename: OptStr = None):
+    def __init__(self, children: WidgetListOpt = None,
+                 layout: LayoutOpt = None, size: StretchyAreaOpt = None,
+                 filename: StrOpt = None):
         """
         Args:
             children: Optional list of widgets to be used as the children of
@@ -202,7 +210,7 @@ class ImageBox(Widget):
         """
         super().__init__(children, layout, size)
         self.filename = filename
-        self._filename: OptStr = None
+        self._filename: StrOpt = None
 
     def render_before_children(self, surface: Console,
                                area: Rectangle) -> None:
@@ -233,10 +241,10 @@ class TextBox(Widget):
     A box for displaying text.
 
     """
-    def __init__(self, children: WidgetList = None, layout: OptLayout = None,
-                 size: StretchyArea = None, text: OptStr = None,
-                 text_color: OptColor = None, bg_color: OptColor = None,
-                 bg_blend: int = tcod.BKGND_SET):
+    def __init__(self, children: WidgetListOpt = None,
+                 layout: LayoutOpt = None, size: StretchyAreaOpt = None,
+                 text: StrOpt = None, text_color: ColorOpt = None,
+                 bg_color: ColorOpt = None, bg_blend: int = tcod.BKGND_SET):
         """
         Args:
             children: Optional list of widgets to be used as the children of
@@ -277,3 +285,73 @@ class TextBox(Widget):
 
         if self.text:
             surface.print_box(*area, string=self.text, fg=self.text_color)
+
+
+class Choice(NamedTuple):
+    """
+    An individual choice to be displayed by a ChoiceBox widget.
+
+    Args:
+        char: The upper or lower case letter used to select the choice.
+        text: Name or short description of the choice to be displayed.
+        callback: The callback to be invoked when this choice is picked.
+
+    """
+    char: str
+    text: str
+    callback: InputCallback
+
+
+ChoiceIterable = Iterable[Choice]
+ChoiceIterableOpt = Optional[ChoiceIterable]
+
+
+class ChoiceBox(InputReceiverMixin, TextBox):
+    """
+    A box that displays a list of choices for the user to select from.
+
+    """
+    def __init__(self, size: StretchyAreaOpt = None,
+                 choices: ChoiceIterableOpt = None,
+                 text_color: ColorOpt = None, bg_color: ColorOpt = None,
+                 bg_blend: int = tcod.BKGND_SET):
+        """
+        Args:
+            size: Optional StretchyArea object describing how this widget
+                should be sized. If unspecified, the widget will have no
+                minimum or maximum size, and will have horizontal and vertical
+                expansion weights of 1.0.
+            choices: Collection of Choice objects corresponding to the choices
+                to display. If unspecified, no choices will be listed.
+            text_color: The color of the displayed text. If unspecified, the
+                current foreground color of the tiles written to will be left
+                unchanged.
+            bg_color: Background color of the text box. If unspecified, the
+                current background color of the tiles written to will be left
+                unchanged.
+            bg_blend: A tcod blending mode to use for the background color.
+                Defaults to tcod.BKGND_SET, which will overwrite the existing
+                background color.
+
+        """
+        super().__init__(size=size, text_color=text_color, bg_color=bg_color,
+                         bg_blend=bg_blend)
+        self.choices = choices or list()
+
+    @property
+    def choices(self) -> ChoiceIterable:
+        """The choices to display."""
+        return self._choices
+
+    @choices.setter
+    def choices(self, value: ChoiceIterable):
+        self._choices = value
+        strings: StrList = list()
+        self.bound_keys.clear()
+
+        for choice in self._choices:
+            strings.append(f"[{choice.char}] {choice.text}")
+            self.bind_keyset((KeyStroke.from_letter(choice.char),),
+                             *choice.callback)
+
+        self.text = "\n".join(strings)

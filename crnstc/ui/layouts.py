@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, List, Tuple, TYPE_CHECKING
+from typing import Iterator, List, Optional, Tuple, TYPE_CHECKING
 
 from crnstc.geometry import (Line1d, Line1dList, Rectangle, StretchyArea,
                              StretchyLength, StretchyLengthIterable)
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
     Int2Tuple = Tuple[int, int]
     RectangleList = List[Rectangle]
+    StretchyLengthOpt = Optional[StretchyLength]
     WidgetIterator = Iterator[Widget]
 
 
@@ -197,10 +198,10 @@ class PaddingLayout(Layout):
 
     """
     def __init__(self, all_sides: StretchyLength = StretchyLength(),
-                 left: StretchyLength = None,
-                 right: StretchyLength = None,
-                 top: StretchyLength = None,
-                 bottom: StretchyLength = None):
+                 left: StretchyLengthOpt = None,
+                 right: StretchyLengthOpt = None,
+                 top: StretchyLengthOpt = None,
+                 bottom: StretchyLengthOpt = None):
         """
         Args:
             all_sides: Padding to apply to any unspecified side.
@@ -218,6 +219,9 @@ class PaddingLayout(Layout):
 
     @property
     def aggregate_size(self) -> StretchyArea:
+        if not self.widget.children:
+            return self.widget.size
+
         child = self.widget.children[0]
         stretchy_width = StretchyLength.sum((self.left,
                                              child.size.stretchy_width,
@@ -230,6 +234,9 @@ class PaddingLayout(Layout):
                                              *self.widget.size.expansion)
 
     def calculate_layout(self, area: Rectangle) -> RectangleList:
+        if not self.widget.children:
+            return list()
+
         child = self.widget.children[0]
         horizontal: Line1d = area.horizontal_line.allocate(
             (self.left, child.size.stretchy_width, self.right)

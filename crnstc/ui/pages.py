@@ -3,17 +3,32 @@ Full-console widget arrangements, such as the title screen and main gameplay
 screen.
 
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import tcod
 
 import crnstc.color as color
 from crnstc.geometry import StretchyArea, StretchyLength
+from crnstc.ui.input import InputCallback
 from crnstc.ui.layouts import PaddingLayout, VerticalLayout
-from crnstc.ui.widgets import ImageBox, TextBox, Widget
+from crnstc.ui.widgets import Choice, ChoiceBox, ImageBox, TextBox, Widget
+
+if TYPE_CHECKING:
+    from crnstc.ui import UserInterface
 
 
 class Page(Widget):
     """Base class inherited by other page classes."""
-    pass
+    def __init__(self, ui: UserInterface, *args, **kwargs):
+        """
+        Args:
+            ui: Reference to the main user interface object.
+
+        """
+        super().__init__(*args, **kwargs)
+        self.ui = ui
 
 
 class TitleScreen(Page):
@@ -22,20 +37,29 @@ class TitleScreen(Page):
     screen "graphics", and a new game/load/quit menu.
 
     """
-    def __init__(self, game_name: str):
-        """
-        Args:
-            game_name: What are we playing?
-
-        """
+    def __init__(self, ui: UserInterface):
         image_width = 80
         image_height = 50
-        choices = ["[N] Play a new game",
-                   "[C] Continue last game",
-                   "[Q] Quit"]
-        choices_width = max(len(choice) for choice in choices)
+        choices = (
+            Choice("n", "Play a new game",
+                   InputCallback(self.cb_menu_new_game)),
+            Choice("c", "Continue last game",
+                   InputCallback(self.cb_menu_load_game)),
+            Choice("q", "Quit", InputCallback(self.cb_menu_quit)),
+        )
+        choices_width = max(len(choice.text) for choice in choices) + 4
+        menu = ChoiceBox(
+            size=StretchyArea.fixed(choices_width + 2, len(choices)),
+            choices=choices,
+            text_color=color.menu_text,
+            bg_color=color.black,
+            bg_blend=tcod.BKGND_ALPHA(64),
+        )
+        ui.input_handler.register(menu)
+        # TODO: Make sure this gets unregistered properly
 
         super().__init__(
+            ui=ui,
             layout=PaddingLayout(),
             children=[
                 ImageBox(
@@ -52,26 +76,44 @@ class TitleScreen(Page):
                             ),
                             children=[
                                 TextBox(
-                                    size=StretchyArea.fixed(len(game_name), 1),
-                                    text=game_name,
+                                    size=StretchyArea.fixed(len(ui.game_name),
+                                                            1),
+                                    text=ui.game_name,
                                     text_color=color.menu_title,
                                 ),
                             ],
                         ),
                         Widget(
                             layout=PaddingLayout(top=StretchyLength.fixed(0)),
-                            children=[
-                                TextBox(
-                                    size=StretchyArea.fixed(choices_width + 2,
-                                                            len(choices)),
-                                    text="\n".join(choices),
-                                    text_color=color.menu_text,
-                                    bg_color=color.black,
-                                    bg_blend=tcod.BKGND_ALPHA(64),
-                                ),
-                            ],
+                            children=[menu],
                         ),
                     ],
                 ),
             ],
         )
+
+    def cb_menu_new_game(self, data: object) -> None:
+        """Called when the "new game" option is selected."""
+        print("new game")
+
+    def cb_menu_load_game(self, data: object) -> None:
+        """Called when the "continue game" option is selected."""
+        print("load game")
+
+    def cb_menu_quit(self, data: object) -> None:
+        """Called when the "quit" option is selected."""
+        raise SystemExit
+
+
+class MainGameplayScreen(Page):
+    """
+    world_pane = ColorBox(size=StretchyArea(min_width=80,
+                                            min_height=43))
+    status_pane = ColorBox()
+    log_pane = ColorBox(size=StretchyArea(width_expansion=2.0,
+                                          height_expansion=1.0))
+    info_section = Widget(children=[status_pane, log_pane],
+                          layout=HorizontalLayout())
+    main_widget = Widget(children=[world_pane, info_section],
+                         layout=VerticalLayout())
+    """
