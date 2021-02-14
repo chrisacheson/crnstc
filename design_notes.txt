@@ -101,6 +101,19 @@ https://en.wikipedia.org/wiki/List_of_places_on_land_with_elevations_below_sea_l
 https://en.wikipedia.org/wiki/Seasteading
 Modern day dustbowl scenario in the midwest, crippling food supplies? Could provide more incentive for central red US faction to cooperate to some extent with coastal blue US faction.
 
+The proliferation of cybernetic and genetic augmentations leads to the rise of
+a reactionary "bioconservative" movement. While gender transitioning has become
+normalized in some areas, anti-transgender hate groups still exist, and these
+would be natural allies of the bioconservatives. Correspondingly, while
+acceptance has led to an increase in complacency and conservatism among
+transgender folks, remaining transgender rights activists are natural allies of
+the transhumanists.
+Also, transpeciesism? Furries and kemonomimi types would take advantage of
+augmentation tech to reshape their bodies. For example, "The Black Alien", but
+more so:
+https://www.sinisterisles.com/post/the-black-alien-body-modification
+https://www.instagram.com/the_black_alien_project/
+
 
 Misc notes:
 
@@ -172,3 +185,17 @@ corporate/government facilities to obtain the designs.
 "Dynamic" lighting? As in per-tile light levels based on local light sources,
 rather than the usual lit/unlit approach taken by most roguelikes. Would be
 great for atmosphere, but could get too computationally intensive.
+
+How to simulate an entire world in a computationally feasible way?
+Abstract micro-level activity to the macro level when the player isn't around
+to observe what's actually happening. At the highest level, simulate the
+actions of countries, megacorps, and other global-scale factions, along with
+"international news" events. When the player enters a new region, regenerate
+that region from a deterministic seed, and catch up (abbreviating as necessary)
+on any region-level activity that happened in the players absence. Catch-up
+activity should be consistent with any global activity that happened during the
+that period. Treat local-level activity in a similar manner to regional. At the
+local level, divide the map up into sectors. Only the player's current sector
+and the ones directly surrounding it would be loaded in memory.
+How to have persistent NPCs that travel between map sectors?
+Partially load map sectors out to some maximum commute radius?
