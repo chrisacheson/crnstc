@@ -211,3 +211,7 @@ player drops a credstick and the NPC picks it up, we'd save that as an event
 that modifies the NPC's wealth next time we generate them. If no one picked up
 the credstick before the player left the area, we would instead apply the
 +wealth event to the neighborhood, distributing it evenly or pseudorandomly.
+
+Make all other random elements (dice rolls, etc) deterministic too, and store a
+log of all player actions. This will allow us to do replays of the entire game
+state.
