@@ -199,3 +199,15 @@ local level, divide the map up into sectors. Only the player's current sector
 and the ones directly surrounding it would be loaded in memory.
 How to have persistent NPCs that travel between map sectors?
 Partially load map sectors out to some maximum commute radius?
+Save timeline of notable events that happen to each NPC? Would this be more
+efficient than saving all data for the NPC once a notable event happens?
+For example, if we're keeping track of NPC wealth, they might have an income
+and expenditure rate chosen pseudorandomly from their seed, modified by the
+attributes of the area they were generated in (maybe have a neighborhood
+faction for this). To figure out how much wealth they currently have, multiply
+their net income by the time since game start. So far we don't need to store
+anything, and can just forget about the NPC and generate it again later. If the
+player drops a credstick and the NPC picks it up, we'd save that as an event
+that modifies the NPC's wealth next time we generate them. If no one picked up
+the credstick before the player left the area, we would instead apply the
++wealth event to the neighborhood, distributing it evenly or pseudorandomly.
