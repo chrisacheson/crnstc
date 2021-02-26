@@ -215,3 +215,5 @@ the credstick before the player left the area, we would instead apply the
 Make all other random elements (dice rolls, etc) deterministic too, and store a
 log of all player actions. This will allow us to do replays of the entire game
 state.
+
+Shipping container safehouses!
