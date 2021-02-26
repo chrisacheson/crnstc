@@ -217,3 +217,5 @@ log of all player actions. This will allow us to do replays of the entire game
 state.
 
 Shipping container safehouses!
+
+Cataclysm-style gun combat
