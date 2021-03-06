@@ -219,3 +219,16 @@ state.
 Shipping container safehouses!
 
 Cataclysm-style gun combat
+
+Melee combat ideas:
+Attacker makes an attack roll for each limb, defender makes a defense roll for each limb and for dodge (or maybe the leg defense rolls are for dodging?). Each roll will have a different difficulty, based on various factors (weapon/technique used, maybe punching is easier than kicking, etc). For any attack roll that's better than the defender's best defense roll, calculate damage and use the one with the best result.
+Different attacks have different speeds? Use attack with highest DPS instead of highest damage.
+Different techniques? Still only one roll per limb, but check rolls against list of techniques with varying difficulty/damage/speed. Can include things like drawing and using a sheathed knife or holstered sidearm, pistol whipping (when gun is empty or to conserve ammo?), dropping an empty gun (preferably attached to you with a sling) in order to use finger razors, etc.
+Multi-limb techniques? Bear hug, grab and strike, etc. Need multiple successful attack rolls to use.
+Counterattacks? Have higher-difficulty techniques for defense rolls that do damage to the attacker instead of just evading.
+Additional limbs provide additional attack/defense rolls. Don't mess with the guy that has six arms.
+Treat head as an additional limb? Headbutt and bite techniques.
+Defending should probably take some amount of time, especially if counterattacks are involved. This makes it possible to get locked in melee combat, which isn't unrealistic, but we'll have to account for it. Make defenses faster than attacks? Eliminate distinction between attacking and defending (Shadowrun style) so that defender gets to respond with full-power attacks? Have defender prioritize faster techniques over more DPS? Have techniques that break away from combat, either by stepping back or knocking opponent back?
+Stamina cost for using techniques? Prioritize DPS when at full stamina, but prioritize stamina efficiency as stamina drops.
+Fighting at arms length vs extreme close quarters? Some techniques will work better/worse when extremely close.
+Player preferences? Most of this stuff can be handled automatically, but player may want to conserve ammo, use less lethal techniques, avoid close quarters, not drop weapons, etc. May also have different preferences for different kinds of opponents. Need to have ways to specify without forcing them to micro-manage.
