@@ -232,3 +232,36 @@ Defending should probably take some amount of time, especially if counterattacks
 Stamina cost for using techniques? Prioritize DPS when at full stamina, but prioritize stamina efficiency as stamina drops.
 Fighting at arms length vs extreme close quarters? Some techniques will work better/worse when extremely close.
 Player preferences? Most of this stuff can be handled automatically, but player may want to conserve ammo, use less lethal techniques, avoid close quarters, not drop weapons, etc. May also have different preferences for different kinds of opponents. Need to have ways to specify without forcing them to micro-manage.
+
+Perception/identification system:
+Each object has a "visibility" rating determining how easy it is to see, and a
+"notability" rating determining how much it stands out once seen. Possibly also
+a notability category, to allow notability to be context-based? For example, a
+business suit wouldn't stand out in a corporate environment where everyone is
+wearing them, but would in a dive bar where everyone is wearing much less
+formal attire. These ratings also apply to bodily features and external
+cybernetics. Features, clothing, and carried items can also imply things about
+a character, such as gender, profession, or subculture.
+Characters are described by their most notable consistently visible
+characteristics. For short descriptions in the game log, use the top 2 or 3
+characteristics, such as "tall policewoman" or "punk with pink mohawk".
+Character symbols should probably be determined by profession or subculture,
+falling back on "p" for person (or maybe "m" or "w" for those that are visibly
+gendered? "c", "b", "g" for child, boy, girl?) Symbol color may be usable for
+some secondary characteristic (primary clothing color? skin tone?), or could
+just be used to disambiguate professions and subcultures that use the same
+symbol.
+Looking at a character will show their most notable characteristics that are
+currently visible, either limited to a certain number of characteristics or a
+certain notability threshold. Other characters can examine them in detail to
+see all visible characteristics, but this takes a small amount of time and may
+be noticed by the character being observed.
+Figure out how to connect this with recognizing characters that have been seen
+previously. Should each characteristic also have a "uniqueness" rating? How to
+handle temporary characteristics? A unique article of clothing may make someone
+more recognizable, but only if they've been seen in it before. Could get weird
+with unique clothing that obscures other unique characteristics. If a guy in a
+Reagan mask keeps robbing you, you'll "recognize" him by the mask, but probably
+shouldn't be able to identify him later with the mask off.
+Tie notable events to characters, so that they can be recognized as having done
+particular things, even if their names are unknown.
