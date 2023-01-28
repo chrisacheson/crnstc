@@ -4,6 +4,7 @@ from typing import Iterable, List, NamedTuple, Optional
 from tcod.console import Console
 import tcod.image
 
+from crnstc import color
 from crnstc.color import Color
 from crnstc.geometry import Rectangle, StretchyArea
 from crnstc.ui.input import InputCallback, InputReceiverMixin, KeyStroke
@@ -355,3 +356,60 @@ class ChoiceBox(InputReceiverMixin, TextBox):
                              *choice.callback)
 
         self.text = "\n".join(strings)
+
+
+class ProgressBar(Widget):
+    """
+    Progress-bar style widget for displaying percentage values.
+
+    Set the percentage value and overlay text using the percentage and text
+    attributes, respectively.
+
+    """
+    def __init__(
+        self,
+        size: StretchyAreaOpt = StretchyArea(min_height=1, max_height=1),
+        filled_color: Color = color.bar_filled,
+        unfilled_color: Color = color.bar_empty,
+        text_color: Color = color.bar_text,
+    ):
+        """
+        Args:
+            size: Optional StretchyArea object describing how this widget
+                should be sized. If unspecified, the widget will have a fixed
+                height of 1,  no minimum or maximum width, and will have
+                horizontal and vertical expansion weights of 1.0.
+            filled_color: Optional color for the filled portion of the bar.
+            unfilled_color: Optional color for the unfilled portion of the bar.
+            text_color: Optional color for the overlay text.
+
+        """
+        super().__init__(size=size)
+        self.filled_color = filled_color
+        self.unfilled_color = unfilled_color
+        self.text_color = text_color
+        self.percentage: float = 0.0
+        self.text: str = ""
+
+    def render_before_children(self, surface: Console,
+                               area: Rectangle) -> None:
+        super().render_before_children(surface=surface, area=area)
+
+        filled_width = round(area.w * self.percentage)
+
+        if filled_width:
+            filled_shape = Rectangle(*area.position, w=filled_width, h=area.h)
+            surface.draw_rect(*filled_shape, ch=ord(" "), bg=self.filled_color)
+
+        unfilled_x = area.x + filled_width
+        unfilled_width = area.w - filled_width
+
+        if unfilled_width:
+            unfilled_shape = Rectangle(x=unfilled_x, y=area.y,
+                                       w=unfilled_width, h=area.h)
+            surface.draw_rect(*unfilled_shape, ch=ord(" "),
+                              bg=self.unfilled_color)
+
+        if self.text:
+            surface.print(*area.relative(x=1, y=0), string=self.text,
+                          fg=self.text_color)

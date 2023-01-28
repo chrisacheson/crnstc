@@ -12,8 +12,9 @@ import tcod
 import crnstc.color as color
 from crnstc.geometry import StretchyArea, StretchyLength
 from crnstc.ui.input import InputCallback
-from crnstc.ui.layouts import PaddingLayout, VerticalLayout
-from crnstc.ui.widgets import Choice, ChoiceBox, ImageBox, TextBox, Widget
+from crnstc.ui.layouts import HorizontalLayout, PaddingLayout, VerticalLayout
+from crnstc.ui.widgets import (Choice, ChoiceBox, ColorBox, ImageBox, TextBox,
+                               Widget)
 
 if TYPE_CHECKING:
     from crnstc.ui import UserInterface
@@ -48,15 +49,14 @@ class TitleScreen(Page):
             Choice("q", "Quit", InputCallback(self.cb_menu_quit)),
         )
         choices_width = max(len(choice.text) for choice in choices) + 4
-        menu = ChoiceBox(
+        self.menu = ChoiceBox(
             size=StretchyArea.fixed(choices_width + 2, len(choices)),
             choices=choices,
             text_color=color.menu_text,
             bg_color=color.black,
             bg_blend=tcod.BKGND_ALPHA(64),
         )
-        ui.input_handler.register(menu)
-        # TODO: Make sure this gets unregistered properly
+        ui.input_handler.register(self.menu)
 
         super().__init__(
             ui=ui,
@@ -85,7 +85,7 @@ class TitleScreen(Page):
                         ),
                         Widget(
                             layout=PaddingLayout(top=StretchyLength.fixed(0)),
-                            children=[menu],
+                            children=[self.menu],
                         ),
                     ],
                 ),
@@ -94,7 +94,8 @@ class TitleScreen(Page):
 
     def cb_menu_new_game(self, data: object) -> None:
         """Called when the "new game" option is selected."""
-        print("new game")
+        self.ui.input_handler.unregister(self.menu)
+        self.ui.show_main_gameplay_screen()
 
     def cb_menu_load_game(self, data: object) -> None:
         """Called when the "continue game" option is selected."""
@@ -107,13 +108,17 @@ class TitleScreen(Page):
 
 class MainGameplayScreen(Page):
     """
-    world_pane = ColorBox(size=StretchyArea(min_width=80,
-                                            min_height=43))
-    status_pane = ColorBox()
-    log_pane = ColorBox(size=StretchyArea(width_expansion=2.0,
-                                          height_expansion=1.0))
-    info_section = Widget(children=[status_pane, log_pane],
-                          layout=HorizontalLayout())
-    main_widget = Widget(children=[world_pane, info_section],
-                         layout=VerticalLayout())
+    Screen that will be shown when the user starts playing the game. Displays a
+    view of the game world, along with various status information.
+
     """
+    def __init__(self, ui: UserInterface):
+        world_pane = ColorBox(size=StretchyArea(min_width=80,
+                                                min_height=43))
+        status_pane = ColorBox()
+        log_pane = ColorBox(size=StretchyArea(width_expansion=2.0,
+                                              height_expansion=1.0))
+        info_section = Widget(children=[status_pane, log_pane],
+                              layout=HorizontalLayout())
+        super().__init__(ui=ui, children=[world_pane, info_section],
+                         layout=VerticalLayout())

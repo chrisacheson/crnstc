@@ -1,9 +1,10 @@
 """Module containing all user interface code."""
 import tcod
 
+from crnstc.engine import Engine
 from crnstc.geometry import Rectangle
 from crnstc.ui.input import InputHandler
-from crnstc.ui.pages import TitleScreen
+from crnstc.ui.pages import MainGameplayScreen, Page, TitleScreen
 
 
 class UserInterface:
@@ -36,6 +37,7 @@ class UserInterface:
         ) as context:
             console = context.new_console(order="F")
             self.input_handler = InputHandler()
+            self.current_page: Page
             self.show_title_screen()
 
             while True:
@@ -56,3 +58,8 @@ class UserInterface:
     def show_title_screen(self) -> None:
         """Switch to the title screen page."""
         self.current_page = TitleScreen(ui=self)
+
+    def show_main_gameplay_screen(self) -> None:
+        """Switch to the main gameplay screen page."""
+        self.engine = Engine.new_game()
+        self.current_page = MainGameplayScreen(ui=self)
