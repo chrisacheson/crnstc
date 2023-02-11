@@ -7,6 +7,7 @@ import numpy as np
 from OpenGL import GL as gl
 from OpenGL.GL import shaders as glsl
 import PIL.Image
+import pyrr
 
 from crnstc import definitions as defs
 
@@ -115,6 +116,31 @@ class UserInterface:
         )
         gl.glUseProgram(self.shader)
         gl.glUniform1i(gl.glGetUniformLocation(self.shader, "imageTexture"), 0)
+
+        projection_transform = pyrr.matrix44.create_perspective_projection(
+            fovy=90, aspect=defs.SCREEN_WIDTH/defs.SCREEN_HEIGHT,
+            near=0.1, far=100, dtype=np.float32,
+        )
+        gl.glUniformMatrix4fv(
+            gl.glGetUniformLocation(self.shader, "projection"),
+            1, gl.GL_FALSE, projection_transform,
+        )
+
+        camera_height = 0.5 * defs.SCREEN_HEIGHT / 16
+        view_transform = pyrr.matrix44.create_look_at(
+            eye=(0, 0, camera_height),
+            target=(0, 0, 0),
+            up=(0, 1, camera_height),
+            dtype=np.float32,
+        )
+        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.shader, "view"),
+                              1, gl.GL_FALSE, view_transform)
+
+        model_transform = pyrr.matrix44.create_identity(
+            dtype=np.float32
+        )
+        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.shader, "model"),
+                              1, gl.GL_FALSE, model_transform)
 
     def render(self):
         glfw.poll_events()
