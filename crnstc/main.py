@@ -1,11 +1,13 @@
 import time
 
 from crnstc import definitions as defs
+from crnstc import engine
 from crnstc import ui
 
 
 def main():
-    user_interface = ui.UserInterface()
+    game_engine = engine.GameEngine()
+    user_interface = ui.UserInterface(game_engine)
     min_frame_time = 0
 
     if defs.FPS_CAP:
