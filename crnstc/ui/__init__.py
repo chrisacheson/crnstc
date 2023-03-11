@@ -118,6 +118,7 @@ class UserInterface:
 
             shift = np.array(chunk.position - self.game_engine.player_position,
                              dtype=np.float32)
+            shift -= 0.5
             model_transform = pyrr.matrix44.create_identity(
                 dtype=np.float32
             )
@@ -190,80 +191,30 @@ class ChunkMesh:
 
     def build(self):
         self.vertices = list()
-        cells = self.chunk.cells
+        surfaces = self.chunk.terrain_surfaces
         color = self.color
 
-        for local, value in np.ndenumerate(cells):
-            if value == 0:
-                continue
+        for cell, csurfaces in surfaces.items():
+            for surface in csurfaces:
+                svertices, _ = zip(*surface)
+                svertices = np.array(svertices, dtype=np.float32)
+                svertices += cell
+                svertices = list(svertices)
 
-            x, y, z = local
+                while len(svertices) >= 3:
+                    if len(svertices) == len(surface):
+                        a_s = 0.
+                    elif len(svertices) == 3:
+                        a_s = 1.
+                    else:
+                        a_s = 0.5
 
-            if x == 0 or cells[x-1, y, z] == 0:
-                face_x = x - 0.5  # west face
-                self.vertices.extend((
-                    face_x, y+0.5, z+0.5, *color, 0.0, 1.0,  # nwu
-                    face_x, y+0.5, z-0.5, *color, 0.0, 0.0,  # nwd
-                    face_x, y-0.5, z-0.5, *color, 1.0, 0.0,  # swd
-                    face_x, y-0.5, z-0.5, *color, 1.0, 0.0,  # swd
-                    face_x, y-0.5, z+0.5, *color, 1.0, 1.0,  # swu
-                    face_x, y+0.5, z+0.5, *color, 0.0, 1.0,  # nwu
-                ))
-
-            if x == defs.CHUNK_SIZE - 1 or cells[x+1, y, z] == 0:
-                face_x = x + 0.5  # east face
-                self.vertices.extend((
-                    face_x, y-0.5, z+0.5, *color, 0.0, 1.0,  # seu
-                    face_x, y-0.5, z-0.5, *color, 0.0, 0.0,  # sed
-                    face_x, y+0.5, z-0.5, *color, 1.0, 0.0,  # ned
-                    face_x, y+0.5, z-0.5, *color, 1.0, 0.0,  # ned
-                    face_x, y+0.5, z+0.5, *color, 1.0, 1.0,  # neu
-                    face_x, y-0.5, z+0.5, *color, 0.0, 1.0,  # seu
-                ))
-
-            if y == 0 or cells[x, y-1, z] == 0:
-                face_y = y - 0.5  # south face
-                self.vertices.extend((
-                    x-0.5, face_y, z+0.5, *color, 0.0, 1.0,  # swu
-                    x-0.5, face_y, z-0.5, *color, 0.0, 0.0,  # swd
-                    x+0.5, face_y, z-0.5, *color, 1.0, 0.0,  # sed
-                    x+0.5, face_y, z-0.5, *color, 1.0, 0.0,  # sed
-                    x+0.5, face_y, z+0.5, *color, 1.0, 1.0,  # seu
-                    x-0.5, face_y, z+0.5, *color, 0.0, 1.0,  # swu
-                ))
-
-            if y == defs.CHUNK_SIZE - 1 or cells[x, y+1, z] == 0:
-                face_y = y + 0.5  # north face
-                self.vertices.extend((
-                    x+0.5, face_y, z+0.5, *color, 0.0, 1.0,  # neu
-                    x+0.5, face_y, z-0.5, *color, 0.0, 0.0,  # ned
-                    x-0.5, face_y, z-0.5, *color, 1.0, 0.0,  # nwd
-                    x-0.5, face_y, z-0.5, *color, 1.0, 0.0,  # nwd
-                    x-0.5, face_y, z+0.5, *color, 1.0, 1.0,  # nwu
-                    x+0.5, face_y, z+0.5, *color, 0.0, 1.0,  # neu
-                ))
-
-            if z == 0 or cells[x, y, z-1] == 0:
-                face_z = z - 0.5  # bottom face
-                self.vertices.extend((
-                    x-0.5, y-0.5, face_z, *color, 0.0, 1.0,  # swd
-                    x-0.5, y+0.5, face_z, *color, 0.0, 0.0,  # nwd
-                    x+0.5, y+0.5, face_z, *color, 1.0, 0.0,  # ned
-                    x+0.5, y+0.5, face_z, *color, 1.0, 0.0,  # ned
-                    x+0.5, y-0.5, face_z, *color, 1.0, 1.0,  # sed
-                    x-0.5, y-0.5, face_z, *color, 0.0, 1.0,  # swd
-                ))
-
-            if z == defs.CHUNK_SIZE - 1 or cells[x, y, z+1] == 0:
-                face_z = z + 0.5  # top face
-                self.vertices.extend((
-                    x-0.5, y+0.5, face_z, *color, 0.0, 1.0,  # nwu
-                    x-0.5, y-0.5, face_z, *color, 0.0, 0.0,  # swu
-                    x+0.5, y-0.5, face_z, *color, 1.0, 0.0,  # seu
-                    x+0.5, y-0.5, face_z, *color, 1.0, 0.0,  # seu
-                    x+0.5, y+0.5, face_z, *color, 1.0, 1.0,  # neu
-                    x-0.5, y+0.5, face_z, *color, 0.0, 1.0,  # nwu
-                ))
+                    self.vertices.extend((
+                        *svertices[0], *color, a_s, 1.,
+                        *svertices[1], *color, 0., 0.,
+                        *svertices[2], *color, 1., 0.,
+                    ))
+                    svertices.pop(1)
 
         self.vertex_count = len(self.vertices) // self.vertex_elements
         self.vertices = np.array(self.vertices, dtype=np.float32)
