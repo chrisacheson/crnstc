@@ -88,6 +88,14 @@ What's going on in the rest of the world? Who does each side ally with?
 Alliances are another thing that could be procedurally determined, possibly
 through the faction system.
 
+Alternatively, the US holds together, but ends up with a bunch of internal
+secessionist enclaves that refuse to pay taxes and are sufficiently well-armed
+and organized to defend themselves. Secession is particularly popular among the
+wealthy, and the resulting loss of tax revenue leaves the US hollowed out.
+https://thenetworkstate.com/
+https://www.vanityfair.com/news/2023/02/new-right-civil-war
+How does this interact with classic cyberpunk corporate extraterritoriality?
+
 Climate change brings higher sea levels and bigger storms. Need to account for
 3-5 foot rise (possibly up to 10), plus storm surges. Coastal cities can build
 barriers to manage both. They may also start building seasteads to increase
