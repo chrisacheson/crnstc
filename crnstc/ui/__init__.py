@@ -35,7 +35,7 @@ class UserInterface:
         )
         glfw.make_context_current(self.window)
 
-        gl.glClearColor(0, 0, 0, 1)
+        gl.glClearColor(1, 1, 1, 1)
         gl.glEnable(gl.GL_BLEND)
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
