@@ -94,7 +94,21 @@ class Chunk:
         noise *= defs.TERRAIN_HEIGHT_MULTIPLIER
         noise -= np.arange(z0, z1 + 1, dtype=np.float64)
 
-        for local in np.ndindex(defs.CHUNK_SHAPE):
+        products = np.empty(defs.CHUNK_SHAPE, dtype=np.float64)
+        intersections = np.zeros(defs.CHUNK_SHAPE, dtype=np.uint8)
+
+        for edge in cube_graph.edges:
+            corner0, corner1 = edge
+            slice0 = (slice(corner0.x, defs.CHUNK_SIZE + corner0.x),
+                      slice(corner0.y, defs.CHUNK_SIZE + corner0.y),
+                      slice(corner0.z, defs.CHUNK_SIZE + corner0.z))
+            slice1 = (slice(corner1.x, defs.CHUNK_SIZE + corner1.x),
+                      slice(corner1.y, defs.CHUNK_SIZE + corner1.y),
+                      slice(corner1.z, defs.CHUNK_SIZE + corner1.z))
+            np.multiply(noise[slice0], noise[slice1], out=products)
+            intersections[products < 0] += 1
+
+        for local in np.argwhere(intersections > 0):
             skip_cell = False
 
             for node in cube_graph.nodes:
@@ -111,8 +125,6 @@ class Chunk:
             if skip_cell:
                 continue
 
-            intersection_count = 0
-
             for edge in cube_graph.edges:
                 corner0, corner1 = edge
                 cnoise0 = cube_graph.node_data[corner0]
@@ -124,10 +136,6 @@ class Chunk:
                     intersection = cnoise0 / (cnoise0 - cnoise1)
                     vertex = (corner1 - corner0) * intersection + corner0
                     cube_graph.edges[edge] = vertex
-                    intersection_count += 1
-
-            if not intersection_count:
-                continue
 
             unvisited = set(cube_graph.nodes.keys())
             surface_vertices = list()
