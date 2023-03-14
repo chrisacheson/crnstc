@@ -55,9 +55,13 @@ class GameEngine:
 
 
 class Chunk:
+    cube_graph = None
+
     def __init__(self, position: Vector):
         self.position = position
         self.terrain_surfaces = collections.defaultdict(list)
+        self.make_cube_graph()
+        cube_graph = self.cube_graph
 
         z_max = defs.TERRAIN_HEIGHT_MULTIPLIER
         z_min = -defs.TERRAIN_HEIGHT_MULTIPLIER
@@ -89,34 +93,6 @@ class Chunk:
         noise = opensimplex.noise3array(z_corners, y_corners, x_corners)
         noise *= defs.TERRAIN_HEIGHT_MULTIPLIER
         noise -= np.arange(z0, z1 + 1, dtype=np.float64)
-
-        cube_graph = Graph()
-        swd = Vector(0, 0, 0)
-        sed = Vector(1, 0, 0)
-        nwd = Vector(0, 1, 0)
-        ned = Vector(1, 1, 0)
-        swu = Vector(0, 0, 1)
-        seu = Vector(1, 0, 1)
-        nwu = Vector(0, 1, 1)
-        neu = Vector(1, 1, 1)
-
-        # x edges
-        cube_graph.add_edge(swd, sed)
-        cube_graph.add_edge(nwd, ned)
-        cube_graph.add_edge(swu, seu)
-        cube_graph.add_edge(nwu, neu)
-
-        # y edges
-        cube_graph.add_edge(swd, nwd)
-        cube_graph.add_edge(sed, ned)
-        cube_graph.add_edge(swu, nwu)
-        cube_graph.add_edge(seu, neu)
-
-        # z edges
-        cube_graph.add_edge(swd, swu)
-        cube_graph.add_edge(sed, seu)
-        cube_graph.add_edge(nwd, nwu)
-        cube_graph.add_edge(ned, neu)
 
         for local in np.ndindex(defs.CHUNK_SHAPE):
             skip_cell = False
@@ -233,3 +209,37 @@ class Chunk:
         end_time = time.time()
         time_diff = end_time - begin_time
         print(f"Chunk at {self.position} initialized in {time_diff}s")
+
+    def make_cube_graph(self):
+        if self.cube_graph is not None:
+            return
+
+        cube_graph = Graph()
+        swd = Vector(0, 0, 0)
+        sed = Vector(1, 0, 0)
+        nwd = Vector(0, 1, 0)
+        ned = Vector(1, 1, 0)
+        swu = Vector(0, 0, 1)
+        seu = Vector(1, 0, 1)
+        nwu = Vector(0, 1, 1)
+        neu = Vector(1, 1, 1)
+
+        # x edges
+        cube_graph.add_edge(swd, sed)
+        cube_graph.add_edge(nwd, ned)
+        cube_graph.add_edge(swu, seu)
+        cube_graph.add_edge(nwu, neu)
+
+        # y edges
+        cube_graph.add_edge(swd, nwd)
+        cube_graph.add_edge(sed, ned)
+        cube_graph.add_edge(swu, nwu)
+        cube_graph.add_edge(seu, neu)
+
+        # z edges
+        cube_graph.add_edge(swd, swu)
+        cube_graph.add_edge(sed, seu)
+        cube_graph.add_edge(nwd, nwu)
+        cube_graph.add_edge(ned, neu)
+
+        self.__class__.cube_graph = cube_graph
