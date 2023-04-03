@@ -17,9 +17,10 @@ class Graph:
 
     @staticmethod
     def edge_key(a, b):
-        key = [a, b]
-        key.sort()
-        return tuple(key)
+        if a < b:
+            return a, b
+        else:
+            return b, a
 
     def add_edge(self, a, b, data=None):
         if a not in self.nodes:
