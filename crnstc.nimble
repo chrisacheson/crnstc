@@ -10,4 +10,7 @@ bin           = @["crnstc"]
 
 # Dependencies
 
+requires "glm >= 1.1.1"
 requires "nim >= 1.6.12"
+requires "nimgl >= 1.3.2"
+requires "stb_image >= 2.5"

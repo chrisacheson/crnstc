@@ -1,5 +1,29 @@
-# This is just an example to get you started. A typical binary package
-# uses this file as the main entry point of the application.
+import std/[monotimes, os, times]
+
+import engine
+import ui
+
+const fpsCap = 60
+const minFrameTime =
+  when fpsCap > 0: initDuration(seconds=1) div fpsCap
+  else: initDuration()
 
 when isMainModule:
-  echo("Hello, World!")
+  var gameEngine = newGameEngine()
+  var userInterface = newUserInterface(gameEngine)
+  var lastTime =
+    when fpsCap > 0: getMonoTime()
+    else: nil
+
+  while not userInterface.quitRequested():
+    userInterface.render()
+
+    when fpsCap > 0:
+      let thisTime = getMonoTime()
+      let frameTime = thisTime - lastTime
+
+      if frameTime < minFrameTime:
+        let delay = minFrameTime - frameTime
+        sleep(delay.inMilliseconds)
+
+  userInterface.quit()
