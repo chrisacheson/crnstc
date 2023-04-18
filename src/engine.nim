@@ -11,6 +11,8 @@ import std/[
 import glm
 import glm/noise
 
+import glm_helper
+
 const
   chunkSize = 16
   terrainHeightMultiplier = 16
@@ -57,15 +59,11 @@ proc newChunk(position: Vec3[int]): Chunk =
     echo &"Chunk at {position} is empty"
     return
 
-  let
-    x0 = position.x
-    y0 = position.y
-
   var cornerNoise: Array3[chunkSize+1, chunkSize+1, chunkSize+1, float32]
   for x in 0..chunkSize:
     for y in 0..chunkSize:
       for z in 0..chunkSize:
-        var v = vec3(float32(x+x0), float32(y+y0), float32(z+z0))
+        var v = toFloat32(position + vec3(x, y, z))
         v /= terrainStretch
         var noise = simplex(v)
         noise *= terrainHeightMultiplier
@@ -130,11 +128,8 @@ proc newChunk(position: Vec3[int]): Chunk =
                     else:
                       (corner, neighbor)
                   vertex = cubeEdgeIntersections[edge]
-                  normal = neighbor - corner
-                  fnormal = vec3(normal.x.float32,
-                                 normal.y.float32,
-                                 normal.z.float32)
-                verticesWithNormals.add((vertex, fnormal))
+                  normal = toFloat32(neighbor - corner)
+                verticesWithNormals.add((vertex, normal))
               elif neighbor in unvisited:
                 visitNext.add(neighbor)
                 unvisited.excl(neighbor)
@@ -186,17 +181,15 @@ type GameEngine* = ref object
   chunks*: Table[Vec3[int], Chunk]
   playerPosition*: Vec3[int]
 
-proc chunk(gameEngine: GameEngine, x, y, z: int): Chunk =
-  let alignedPosition = vec3(x - x.floorMod(chunkSize),
-                             y - y.floorMod(chunkSize),
-                             z - z.floorMod(chunkSize))
+proc chunk(gameEngine: GameEngine, position: Vec3[int]): Chunk =
+  let alignedPosition = position - position.floorMod(chunkSize)
   result = gameEngine.chunks.getOrDefault(alignedPosition)
   if result == nil:
     result = newChunk(alignedPosition)
     gameEngine.chunks[alignedPosition] = result
 
-proc chunk(gameEngine: GameEngine, position: Vec3[int]): Chunk =
-  gameEngine.chunk(position.x, position.y, position.z)
+proc chunk(gameEngine: GameEngine, x, y, z: int): Chunk =
+  gameEngine.chunk(vec3(x, y, z))
 
 proc newGameEngine*(): GameEngine =
   let beginTime = getMonoTime()

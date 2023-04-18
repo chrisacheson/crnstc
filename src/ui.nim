@@ -10,6 +10,7 @@ import nimgl/[glfw, opengl]
 import stb_image/read as stbi
 
 import engine
+import glm_helper
 
 const
   gameName = "Cyberpunk Roguelike (Name Subject to Change)"
@@ -58,9 +59,7 @@ proc build(self: ChunkMesh) =
     var color = if cell.x == 0 and cell.y == 0: altColor else: mainColor
     for surface in cellSurfaces:
       var vertices = surface.vertices
-      for vertex in vertices.mitems: vertex += vec3(cell.x.float32,
-                                                    cell.y.float32,
-                                                    cell.z.float32)
+      for vertex in vertices.mitems: vertex = vertex + cell
       while vertices.len >= 3:
         var upperVertexTextureCoordinateS = 0f
         if vertices.len == 3:
@@ -210,11 +209,8 @@ proc render*(self: UserInterface) =
       mesh.build
 
     glBindVertexArray(mesh.vao)
-    var
-      relativePosition = block:
-        var rp = position - self.gameEngine.playerPosition
-        vec3(rp.x.float32, rp.y.float32, rp.z.float32) - 0.5
-      modelTransform = mat4(1f).translate(relativePosition)
+    let relativePosition = position - self.gameEngine.playerPosition - 0.5f
+    var modelTransform = mat4(1f).translate(relativePosition)
     glUniformMatrix4fv(self.modelMatrixLocation, 1, false, modelTransform.caddr)
     glDrawArrays(GL_TRIANGLES, 0, mesh.vertexCount.GLsizei)
 
