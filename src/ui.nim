@@ -18,14 +18,6 @@ const
   screenHeight = 600
   screenAspect = screenWidth / screenHeight
 
-type ChunkMesh = ref object
-  chunk: Chunk
-  vao: GLuint
-  vbo: GLuint
-  vertexData: seq[float32]
-  vertexCount: int
-
-const
   vaSizes = [3, # vertexPos
              3, # vertexColor
              2, # vertexTexCoord
@@ -37,10 +29,14 @@ const
   vaOffsets = @[0].concat(vaBytes.cumsummed)
   vaStride = vaOffsets[^1]
 
-proc newChunkMesh(chunk: Chunk): ChunkMesh =
-  new result
-  result.chunk = chunk
+type Mesh = ref object
+  vao: GLuint
+  vbo: GLuint
+  vertexData: seq[float32]
+  vertexCount: int
 
+proc newMesh(): Mesh =
+  new result
   glGenVertexArrays(1, result.vao.addr)
   glBindVertexArray(result.vao)
   glGenBuffers(1, result.vbo.addr)
@@ -50,11 +46,22 @@ proc newChunkMesh(chunk: Chunk): ChunkMesh =
     glVertexAttribPointer(i.GLuint, vaSize.GLint, EGL_FLOAT, false,
                           vaStride.GLsizei, cast[pointer](vaOffsets[i]))
 
+proc destroy(self: Mesh) =
+  glDeleteVertexArrays(1, self.vao.addr)
+  glDeleteBuffers(1, self.vbo.addr)
+
+type ChunkMesh = ref object
+  chunk: Chunk
+  mesh: Mesh
+
+proc newChunkMesh(chunk: Chunk): ChunkMesh =
+  ChunkMesh(chunk: chunk, mesh: newMesh())
+
 proc build(self: ChunkMesh) =
   const
     mainColor = vec3(0f, 1f, 0f)
     altColor = vec3(1f, 0f, 0f)
-  self.vertexData.setLen(0)
+  self.mesh.vertexData.setLen(0)
   for cell, cellSurfaces in self.chunk.terrainSurfaces:
     var color = if cell.x == 0 and cell.y == 0: altColor else: mainColor
     for surface in cellSurfaces:
@@ -67,36 +74,103 @@ proc build(self: ChunkMesh) =
         elif vertices.len < surface.vertices.len:
           upperVertexTextureCoordinateS = 0.5
 
-        self.vertexData.add(vertices[0].arr)
-        self.vertexData.add(color.arr)
-        self.vertexData.add([upperVertexTextureCoordinateS, 1f])
-        self.vertexData.add(vertices[1].arr)
-        self.vertexData.add(color.arr)
-        self.vertexData.add([0f, 0f])
-        self.vertexData.add(vertices[2].arr)
-        self.vertexData.add(color.arr)
-        self.vertexData.add([1f, 0f])
+        self.mesh.vertexData.add(vertices[0].arr)
+        self.mesh.vertexData.add(color.arr)
+        self.mesh.vertexData.add([upperVertexTextureCoordinateS, 1f])
+        self.mesh.vertexData.add(vertices[1].arr)
+        self.mesh.vertexData.add(color.arr)
+        self.mesh.vertexData.add([0f, 0f])
+        self.mesh.vertexData.add(vertices[2].arr)
+        self.mesh.vertexData.add(color.arr)
+        self.mesh.vertexData.add([1f, 0f])
         vertices.delete(1)
 
-  self.vertexCount = self.vertexData.len div vaNumValues
-  glBindVertexArray(self.vao)
-  glBindBuffer(GL_ARRAY_BUFFER, self.vbo)
-  var vertexDataPointer = if self.vertexData.len == 0: nil
-                          else: self.vertexdata[0].addr
-  glBufferData(GL_ARRAY_BUFFER, self.vertexData.len * vaValueBytes,
+  self.mesh.vertexCount = self.mesh.vertexData.len div vaNumValues
+  glBindVertexArray(self.mesh.vao)
+  glBindBuffer(GL_ARRAY_BUFFER, self.mesh.vbo)
+  var vertexDataPointer = if self.mesh.vertexData.len == 0: nil
+                          else: self.mesh.vertexdata[0].addr
+  glBufferData(GL_ARRAY_BUFFER, self.mesh.vertexData.len * vaValueBytes,
                vertexDataPointer, GL_STATIC_DRAW)
 
 proc destroy(self: ChunkMesh) =
-  glDeleteVertexArrays(1, self.vao.addr)
-  glDeleteBuffers(1, self.vbo.addr)
+  self.mesh.destroy
+
+type SpriteSheet = ref object of RootObj
+  textureId: GLuint
+  spriteWidth: int
+  spriteHeight: int
+  columns: int
+  rows: int
+
+proc newSpriteSheet(path: string, spriteWidth: int, spriteHeight: int,
+                    columns: int, rows: int): SpriteSheet =
+  var textureId: GLuint
+  glGenTextures(1, textureId.addr)
+  result = SpriteSheet(textureId: textureId,
+                       spriteWidth: spriteWidth, spriteHeight: spriteHeight,
+                       columns: columns, rows: rows)
+  glBindTexture(GL_TEXTURE_2D, textureId)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT.GLint)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT.GLint)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR.GLint)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR.GLint)
+  var width, height, numChannels: int
+  let textureData = stbi.load(path, width, height, numChannels, stbi.RGBA)
+  assert width >= spriteWidth * columns
+  assert height >= spriteHeight * rows
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA.GLint, width.GLsizei, height.GLsizei,
+               0, GL_RGBA, GL_UNSIGNED_BYTE, textureData[0].addr)
+  glGenerateMipmap(GL_TEXTURE_2D)
+
+proc destroy(self: SpriteSheet) =
+  glDeleteTextures(1, self.textureId.addr)
+
+type Sprite = ref object of RootObj
+  mesh: Mesh
+  sheet: SpriteSheet
+  sheetColumn: int
+  sheetRow: int
+
+proc newSprite(sheet: SpriteSheet, column: int, row: int): Sprite =
+  const
+    color = vec3(0f, 0f, 1f)
+    vertices = [vec3(0f, 0f, 0f), vec3(1f, 0f, 0f), vec3(1f, 1f, 0f),
+                vec3(1f, 1f, 0f), vec3(0f, 1f, 0f), vec3(0f, 0f, 0f)]
+  result = Sprite(mesh: newMesh(), sheet: sheet,
+                  sheetColumn: column, sheetRow: row)
+  for vertex in vertices:
+    result.mesh.vertexData.add(vertex.arr)
+    result.mesh.vertexData.add(color.arr)
+    result.mesh.vertexData.add((vertex.x + column.float32) /
+                               sheet.columns.float32)
+    result.mesh.vertexData.add((float32(row + 1) - vertex.y) /
+                               sheet.rows.float32)
+
+  result.mesh.vertexCount = result.mesh.vertexData.len div vaNumValues
+  glBindVertexArray(result.mesh.vao)
+  glBindBuffer(GL_ARRAY_BUFFER, result.mesh.vbo)
+  var vertexDataPointer = if result.mesh.vertexData.len == 0: nil
+                          else: result.mesh.vertexdata[0].addr
+  glBufferData(GL_ARRAY_BUFFER, result.mesh.vertexData.len * vaValueBytes,
+               vertexDataPointer, GL_STATIC_DRAW)
+
+proc newSprite(sheet: SpriteSheet, index: int): Sprite =
+  sheet.newSprite(index.floorMod(sheet.columns), index div sheet.columns)
+
+proc newSprite(sheet: SpriteSheet, character: char): Sprite =
+  sheet.newSprite(character.ord)
 
 type UserInterface = ref object
   gameEngine: GameEngine
   window: GLFWWindow
-  textureId: GLuint
+  terrainTextureId: GLuint
   shaderProgramId: GLuint
   modelMatrixLocation: GLint
   chunkMeshes: Table[Vec3[int], ChunkMesh]
+  spriteSheet: SpriteSheet
+  playerSprite: Sprite
 
 proc quitRequested*(self: UserInterface): bool =
   result = self.window.windowShouldClose
@@ -124,8 +198,8 @@ proc newUserInterface*(gameEngine: GameEngine): UserInterface =
   glEnable(GL_DEPTH_TEST)
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-  glGenTextures(1, result.textureId.addr)
-  glBindTexture(GL_TEXTURE_2D, result.textureId)
+  glGenTextures(1, result.terrainTextureId.addr)
+  glBindTexture(GL_TEXTURE_2D, result.terrainTextureId)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT.GLint)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT.GLint)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -137,6 +211,9 @@ proc newUserInterface*(gameEngine: GameEngine): UserInterface =
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA.GLint, width.GLsizei, height.GLsizei,
                0, GL_RGBA, GL_UNSIGNED_BYTE, textureData[0].addr)
   glGenerateMipmap(GL_TEXTURE_2D)
+
+  result.spriteSheet = newSpriteSheet("assets/16x16-sb-ascii-bordered.png",
+                                      16, 16, 16, 16)
 
   var success: GLint
   var message = newSeq[char](1024)
@@ -194,33 +271,43 @@ proc newUserInterface*(gameEngine: GameEngine): UserInterface =
   result.modelMatrixLocation = glGetUniformLocation(result.shaderProgramId,
                                                     "model")
 
+  result.playerSprite = result.spriteSheet.newSprite('@')
+
 proc render*(self: UserInterface) =
   glfwPollEvents()
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
   glActiveTexture(GL_TEXTURE0)
-  glBindTexture(GL_TEXTURE_2D, self.textureId)
+  glBindTexture(GL_TEXTURE_2D, self.terrainTextureId)
   glUseProgram(self.shaderProgramId)
 
   for position, chunk in self.gameEngine.chunks:
-    var mesh = self.chunkMeshes.getOrDefault(position)
-    if mesh == nil:
-      mesh = chunk.newChunkMesh
-      self.chunkMeshes[position] = mesh
-      mesh.build
+    var chunkMesh = self.chunkMeshes.getOrDefault(position)
+    if chunkMesh == nil:
+      chunkMesh = chunk.newChunkMesh
+      self.chunkMeshes[position] = chunkMesh
+      chunkMesh.build
 
-    glBindVertexArray(mesh.vao)
+    glBindVertexArray(chunkMesh.mesh.vao)
     let relativePosition = position - self.gameEngine.playerPosition - 0.5f
     var modelTransform = mat4(1f).translate(relativePosition)
     glUniformMatrix4fv(self.modelMatrixLocation, 1, false, modelTransform.caddr)
-    glDrawArrays(GL_TRIANGLES, 0, mesh.vertexCount.GLsizei)
+    glDrawArrays(GL_TRIANGLES, 0, chunkMesh.mesh.vertexCount.GLsizei)
+
+  glBindTexture(GL_TEXTURE_2D, self.spriteSheet.textureId)
+  glBindVertexArray(self.playerSprite.mesh.vao)
+  var modelTransform = mat4(1f).translate(vec3(-0.5f, -0.5f, 0f))
+  glUniformMatrix4fv(self.modelMatrixLocation, 1, false, modelTransform.caddr)
+  glDrawArrays(GL_TRIANGLES, 0, self.playerSprite.mesh.vertexCount.GLsizei)
 
   glFlush()
   self.window.swapBuffers()
 
 proc quit*(self: UserInterface) =
-  for mesh in self.chunkMeshes.values:
-    mesh.destroy
-  glDeleteTextures(1, self.textureId.addr)
+  for chunkMesh in self.chunkMeshes.values:
+    chunkMesh.destroy
+  self.playerSprite.mesh.destroy
+  self.spriteSheet.destroy
+  glDeleteTextures(1, self.terrainTextureId.addr)
   glDeleteProgram(self.shaderProgramId)
   self.window.destroyWindow
   glfwTerminate()
