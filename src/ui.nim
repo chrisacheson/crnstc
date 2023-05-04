@@ -59,12 +59,12 @@ proc newChunkMesh(chunk: Chunk): ChunkMesh =
 
 proc build(self: ChunkMesh) =
   const
-    mainColor = vec3(0f, 1f, 0f)
-    altColor = vec3(1f, 0f, 0f)
+    walkableColor = vec3(0f, 1f, 0f)
+    unwalkableColor = vec3(1f, 0f, 0f)
   self.mesh.vertexData.setLen(0)
   for cell, cellSurfaces in self.chunk.terrainSurfaces:
-    var color = if cell.x == 0 and cell.y == 0: altColor else: mainColor
     for surface in cellSurfaces:
+      var color = if surface.walkable: walkableColor else: unwalkableColor
       var vertices = surface.vertices
       for vertex in vertices.mitems: vertex = vertex + cell
       while vertices.len >= 3:

@@ -17,6 +17,8 @@ const
   chunkSize = 16
   terrainHeightMultiplier = 16
   terrainStretch = 32
+  upVector = vec3(0f, 0f, 1f)
+  maxWalkableIncline = PI / 4
 
 const (cubeCorners, cubeEdges) = block:
   var
@@ -37,6 +39,8 @@ const (cubeCorners, cubeEdges) = block:
 
 type TerrainSurface* = ref object
   vertices*: seq[Vec3[float32]]
+  normal*: Vec3[float32]
+  walkable*: bool
 
 type Chunk* = ref object
   position*: Vec3[int]
@@ -171,7 +175,12 @@ proc newChunk(position: Vec3[int]): Chunk =
             )
             (thetas, orderedVertices) = verticesWithThetas.unzip
 
-            var surface = TerrainSurface(vertices: orderedVertices)
+            let incline = mnormal.dot(upVector).clamp(-1f, 1f).arccos
+            var surface = TerrainSurface(
+              vertices: orderedVertices,
+              normal: mnormal,
+              walkable: incline <= maxWalkableIncline,
+            )
             result.terrainSurfaces[cell].add(surface)
 
   let endTime = getMonoTime()
