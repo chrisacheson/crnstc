@@ -2,6 +2,7 @@ import std/[
   algorithm,
   math,
   monotimes,
+  options,
   sequtils,
   sets,
   strformat,
@@ -18,6 +19,7 @@ const
   terrainHeightMultiplier = 16
   terrainStretch = 32
   upVector = vec3(0f, 0f, 1f)
+  cellMidpoint = vec3(0.5f, 0.5f, 0.5f)
   maxWalkableIncline = PI / 4
 
 const (cubeCorners, cubeEdges) = block:
@@ -40,7 +42,7 @@ const (cubeCorners, cubeEdges) = block:
 type TerrainSurface* = ref object
   vertices*: seq[Vec3[float32]]
   normal*: Vec3[float32]
-  walkable*: bool
+  walkHeight*: Option[float32]
 
 type Chunk* = ref object
   position*: Vec3[int]
@@ -115,8 +117,8 @@ proc newChunk(position: Vec3[int]): Chunk =
           unvisited.incl(corner)
         while unvisited.len > 0:
           visitNext.add(unvisited.pop)
-          var verticesWithNormals: seq[tuple[vertex: Vec3[float32],
-                                             normal: Vec3[float32]]]
+          var verticesWithFakeNormals: seq[tuple[vertex: Vec3[float32],
+                                                 normal: Vec3[float32]]]
           while visitNext.len > 0:
             var corner = visitNext.pop
             if cornerNoise[x+corner.x][y+corner.y][z+corner.z] < 0f:
@@ -132,19 +134,21 @@ proc newChunk(position: Vec3[int]): Chunk =
                     else:
                       (corner, neighbor)
                   vertex = cubeEdgeIntersections[edge]
-                  normal = toFloat32(neighbor - corner)
-                verticesWithNormals.add((vertex, normal))
+                  # Extremely approximate normal vector to the terrain surface
+                  fakeNormal = toFloat32(neighbor - corner)
+                verticesWithFakeNormals.add((vertex, fakeNormal))
               elif neighbor in unvisited:
                 visitNext.add(neighbor)
                 unvisited.excl(neighbor)
 
-          if verticesWithNormals.len > 0:
-            var (vertices, normals) = verticesWithNormals.unzip
+          if verticesWithFakeNormals.len > 0:
+            var (vertices, fakeNormals) = verticesWithFakeNormals.unzip
 
             # Point roughly in the center of all the vertices
             let midpoint = vertices.sum / vertices.len.float32
-            # Normal vector of the surface's front face
-            let mnormal = normals.sum.normalize
+            # Very approximate normal vector of the surface's front face, just
+            # for sorting the vertices into counterclockwise order
+            let mnormal = fakeNormals.sum.normalize
 
             for vertex in vertices.mitems:
               # Vertices relative to the midpoint
@@ -168,18 +172,44 @@ proc newChunk(position: Vec3[int]): Chunk =
                 thetas[i] = 2 * PI - thetas[i]
 
             # Order surface vertices counter-clockwise around mnormal
-            var (orderedVertices, _) = verticesWithNormals.unzip
+            var (orderedVertices, _) = verticesWithFakeNormals.unzip
             var verticesWithThetas = thetas.zip(orderedVertices)
             verticesWithThetas.sort(
               func (a, b: (float32, Vec3[float32])): int = cmp(a[0], b[0])
             )
             (thetas, orderedVertices) = verticesWithThetas.unzip
 
-            let incline = mnormal.dot(upVector).clamp(-1f, 1f).arccos
+            var actualNormal: Vec3[float32]
+            var numNormals = orderedVertices.len
+            # For a triangle, the vertices are guaranteed to be coplanar, so we
+            # don't need to take an average
+            if numNormals == 3:
+              numNormals = 1
+
+            for i in 0..<numNormals:
+              let vertexA = orderedVertices[i]
+              let vertexB = orderedVertices[floorMod(i+1, orderedVertices.len)]
+              let vectorMA = vertexA - midpoint
+              let vectorMB = vertexB - midpoint
+              actualNormal += vectorMA.cross(vectorMB)
+
+            actualNormal = actualNormal.normalize
+
+            # Determine if the surface can be walked on, and its elevation
+            # within the cell
+            let normDotUp = actualNormal.dot(upVector).clamp(-1f, 1f)
+            let incline = normDotUp.arccos
+            var walkHeight: Option[float32]
+            if incline <= maxWalkableIncline:
+              let d = actualNormal.dot(midpoint - cellMidpoint) / normDotUp
+              let intersection = cellMidpoint + d * upVector
+              if intersection.z >= 0f and intersection.z <= 1f:
+                walkHeight = some(intersection.z)
+
             var surface = TerrainSurface(
               vertices: orderedVertices,
-              normal: mnormal,
-              walkable: incline <= maxWalkableIncline,
+              normal: actualNormal,
+              walkHeight: walkHeight,
             )
             result.terrainSurfaces[cell].add(surface)
 
@@ -200,6 +230,15 @@ proc chunk(gameEngine: GameEngine, position: Vec3[int]): Chunk =
 proc chunk(gameEngine: GameEngine, x, y, z: int): Chunk =
   gameEngine.chunk(vec3(x, y, z))
 
+proc cell(gameEngine: GameEngine, position: Vec3[int]): seq[TerrainSurface] =
+  gameEngine.chunk(position).terrainSurfaces[position.floorMod(chunkSize)]
+
+proc playerSurface*(gameEngine: GameEngine): TerrainSurface =
+  let surfaces = gameEngine.cell(gameEngine.playerPosition)
+  for surface in surfaces:
+    if surface.walkHeight.isSome:
+      return surface
+
 proc newGameEngine*(): GameEngine =
   let beginTime = getMonoTime()
   new result
@@ -213,8 +252,12 @@ proc newGameEngine*(): GameEngine =
         z = chunk.position.z - 1
         continue
       for zLocal in countdown(z.floorMod(chunkSize), 0):
-        if vec3(xLocal, yLocal, zLocal) in chunk.terrainSurfaces:
-          z = chunk.position.z + zLocal + 1
+        let cell = vec3(xLocal, yLocal, zLocal)
+        if cell in chunk.terrainSurfaces:
+          let surfaces = chunk.terrainSurfaces[cell]
+          doAssert surfaces.len == 1
+          doAssert surfaces[0].walkHeight.isSome
+          z = chunk.position.z + zLocal
           break findPosition
   result.playerPosition = vec3(x, y, z)
 

@@ -1,5 +1,6 @@
 import std/[
   math,
+  options,
   sequtils,
   sugar,
   tables,
@@ -64,7 +65,8 @@ proc build(self: ChunkMesh) =
   self.mesh.vertexData.setLen(0)
   for cell, cellSurfaces in self.chunk.terrainSurfaces:
     for surface in cellSurfaces:
-      var color = if surface.walkable: walkableColor else: unwalkableColor
+      var color = if surface.walkHeight.isSome: walkableColor
+                  else: unwalkableColor
       var vertices = surface.vertices
       for vertex in vertices.mitems: vertex = vertex + cell
       while vertices.len >= 3:
@@ -288,7 +290,9 @@ proc render*(self: UserInterface) =
       chunkMesh.build
 
     glBindVertexArray(chunkMesh.mesh.vao)
-    let relativePosition = position - self.gameEngine.playerPosition - 0.5f
+    let playerHeadHeight = self.gameEngine.playerSurface.walkHeight.get + 1.8f
+    let offset = vec3(0.5f, 0.5f, playerHeadHeight)
+    var relativePosition = position - self.gameEngine.playerPosition - offset
     var modelTransform = mat4(1f).translate(relativePosition)
     glUniformMatrix4fv(self.modelMatrixLocation, 1, false, modelTransform.caddr)
     glDrawArrays(GL_TRIANGLES, 0, chunkMesh.mesh.vertexCount.GLsizei)
