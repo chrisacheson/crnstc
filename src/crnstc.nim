@@ -16,6 +16,7 @@ when isMainModule:
     else: nil
 
   while not userInterface.quitRequested():
+    userInterface.handleInput
     userInterface.render()
 
     when fpsCap > 0:

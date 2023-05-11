@@ -220,21 +220,22 @@ type GameEngine* = ref object
   chunks*: Table[Vec3[int], Chunk]
   playerPosition*: Vec3[int]
 
-proc chunk(gameEngine: GameEngine, position: Vec3[int]): Chunk =
+proc chunk(self: GameEngine, position: Vec3[int]): Chunk =
   let alignedPosition = position - position.floorMod(chunkSize)
-  result = gameEngine.chunks.getOrDefault(alignedPosition)
+  result = self.chunks.getOrDefault(alignedPosition)
   if result == nil:
     result = newChunk(alignedPosition)
-    gameEngine.chunks[alignedPosition] = result
+    self.chunks[alignedPosition] = result
 
-proc chunk(gameEngine: GameEngine, x, y, z: int): Chunk =
-  gameEngine.chunk(vec3(x, y, z))
+proc chunk(self: GameEngine, x, y, z: int): Chunk =
+  self.chunk(vec3(x, y, z))
 
-proc cell(gameEngine: GameEngine, position: Vec3[int]): seq[TerrainSurface] =
-  gameEngine.chunk(position).terrainSurfaces[position.floorMod(chunkSize)]
+proc cell(self: GameEngine, position: Vec3[int]): seq[TerrainSurface] =
+  self.chunk(position).terrainSurfaces
+    .getOrDefault(position.floorMod(chunkSize), @[])
 
-proc playerSurface*(gameEngine: GameEngine): TerrainSurface =
-  let surfaces = gameEngine.cell(gameEngine.playerPosition)
+proc playerSurface*(self: GameEngine): TerrainSurface =
+  let surfaces = self.cell(self.playerPosition)
   for surface in surfaces:
     if surface.walkHeight.isSome:
       return surface
@@ -269,3 +270,17 @@ proc newGameEngine*(): GameEngine =
 
   let endTime = getMonoTime()
   echo &"{result.chunks.len} chunks initialized in {endTime - beginTime}"
+
+proc attemptMove*(self: GameEngine, direction: Vec3[int]): bool =
+  var currentSurface = self.playerSurface
+  for z in -1..1:
+    var candidateCell = self.playerPosition + direction
+    candidateCell.z += z
+    var candidateSurfaces = self.cell(candidateCell)
+    for candidateSurface in candidateSurfaces:
+      if candidateSurface.walkHeight.isNone:
+        continue
+      elif abs(candidateSurface.walkHeight.get -
+               currentSurface.walkHeight.get + z.float32) <= 1f:
+        self.playerPosition = candidateCell
+        return true

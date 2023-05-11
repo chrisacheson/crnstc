@@ -1,4 +1,5 @@
 import std/[
+  deques,
   math,
   options,
   sequtils,
@@ -177,6 +178,17 @@ type UserInterface = ref object
 proc quitRequested*(self: UserInterface): bool =
   result = self.window.windowShouldClose
 
+type KeyInput = object
+  key: int32
+  mods: int32
+
+var inputQueue = initDeque[KeyInput]()
+
+proc keyCallback(window: GLFWWindow, key: int32, scancode: int32, action: int32,
+                 mods: int32): void {.cdecl.} =
+  if action == GLFW_PRESS or action == GLFW_REPEAT:
+    inputQueue.addLast(KeyInput(key: key, mods: mods))
+
 proc newUserInterface*(gameEngine: GameEngine): UserInterface =
   new result
   result.gameEngine = gameEngine
@@ -192,6 +204,7 @@ proc newUserInterface*(gameEngine: GameEngine): UserInterface =
   if result.window == nil:
     quit(-1)
 
+  discard result.window.setKeyCallback(keyCallback)
   result.window.makeContextCurrent()
   assert glInit()
 
@@ -275,8 +288,40 @@ proc newUserInterface*(gameEngine: GameEngine): UserInterface =
 
   result.playerSprite = result.spriteSheet.newSprite('@')
 
-proc render*(self: UserInterface) =
+const
+  northVector = vec3(0, 1, 0)
+  southVector = -northVector
+  eastVector = vec3(1, 0, 0)
+  westVector = -eastVector
+  northeastVector = northVector + eastVector
+  southeastVector = southVector + eastVector
+  northwestVector = -southeastVector
+  southwestVector = -northeastVector
+
+proc handleInput*(self: UserInterface) =
   glfwPollEvents()
+  while inputQueue.len > 0:
+    var keyInput = inputQueue.popFirst
+    if keyInput.key == GLFWKey.Escape:
+      self.window.setWindowShouldClose(true)
+    elif keyInput.key in [GLFWKey.Kp8, GLFWKey.Up, GLFWKey.K]:
+      discard self.gameEngine.attemptMove(northVector)
+    elif keyInput.key in [GLFWKey.Kp2, GLFWKey.Down, GLFWKey.J]:
+      discard self.gameEngine.attemptMove(southVector)
+    elif keyInput.key in [GLFWKey.Kp6, GLFWKey.Right, GLFWKey.L]:
+      discard self.gameEngine.attemptMove(eastVector)
+    elif keyInput.key in [GLFWKey.Kp4, GLFWKey.Left, GLFWKey.H]:
+      discard self.gameEngine.attemptMove(westVector)
+    elif keyInput.key in [GLFWKey.Kp9, GLFWKey.PageUp, GLFWKey.U]:
+      discard self.gameEngine.attemptMove(northeastVector)
+    elif keyInput.key in [GLFWKey.Kp3, GLFWKey.PageDown, GLFWKey.N]:
+      discard self.gameEngine.attemptMove(southeastVector)
+    elif keyInput.key in [GLFWKey.Kp7, GLFWKey.Home, GLFWKey.Y]:
+      discard self.gameEngine.attemptMove(northwestVector)
+    elif keyInput.key in [GLFWKey.Kp1, GLFWKey.End, GLFWKey.B]:
+      discard self.gameEngine.attemptMove(southwestVector)
+
+proc render*(self: UserInterface) =
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
   glActiveTexture(GL_TEXTURE0)
   glBindTexture(GL_TEXTURE_2D, self.terrainTextureId)
