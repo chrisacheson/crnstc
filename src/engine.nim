@@ -272,15 +272,11 @@ proc newGameEngine*(): GameEngine =
   echo &"{result.chunks.len} chunks initialized in {endTime - beginTime}"
 
 proc attemptMove*(self: GameEngine, direction: Vec3[int]): bool =
-  var currentSurface = self.playerSurface
   for z in -1..1:
     var candidateCell = self.playerPosition + direction
     candidateCell.z += z
     var candidateSurfaces = self.cell(candidateCell)
     for candidateSurface in candidateSurfaces:
-      if candidateSurface.walkHeight.isNone:
-        continue
-      elif abs(candidateSurface.walkHeight.get -
-               currentSurface.walkHeight.get + z.float32) <= 1f:
+      if candidateSurface.walkHeight.isSome:
         self.playerPosition = candidateCell
         return true
