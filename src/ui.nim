@@ -63,30 +63,15 @@ proc build(self: ChunkMesh) =
   const
     walkableColor = vec3(0f, 1f, 0f)
     unwalkableColor = vec3(1f, 0f, 0f)
+    textureCoords = [[0f, 0f], [1f, 0f], [1f, 1f], [0f, 1f]]
   self.mesh.vertexData.setLen(0)
-  for cell, cellSurfaces in self.chunk.terrainSurfaces:
-    for surface in cellSurfaces:
-      var color = if surface.walkHeight.isSome: walkableColor
-                  else: unwalkableColor
-      var vertices = surface.vertices
-      for vertex in vertices.mitems: vertex = vertex + cell
-      while vertices.len >= 3:
-        var upperVertexTextureCoordinateS = 0f
-        if vertices.len == 3:
-          upperVertexTextureCoordinateS = 1f
-        elif vertices.len < surface.vertices.len:
-          upperVertexTextureCoordinateS = 0.5
-
-        self.mesh.vertexData.add(vertices[0].arr)
-        self.mesh.vertexData.add(color.arr)
-        self.mesh.vertexData.add([upperVertexTextureCoordinateS, 1f])
-        self.mesh.vertexData.add(vertices[1].arr)
-        self.mesh.vertexData.add(color.arr)
-        self.mesh.vertexData.add([0f, 0f])
-        self.mesh.vertexData.add(vertices[2].arr)
-        self.mesh.vertexData.add(color.arr)
-        self.mesh.vertexData.add([1f, 0f])
-        vertices.delete(1)
+  for surface in self.chunk.terrainSurfaces:
+    var color = if surface.walkPosition.isSome: walkableColor
+                else: unwalkableColor
+    for i in [0, 1, 2, 2, 3, 0]:
+      self.mesh.vertexData.add(surface.vertices[i].arr)
+      self.mesh.vertexData.add(color.arr)
+      self.mesh.vertexData.add(textureCoords[i])
 
   self.mesh.vertexCount = self.mesh.vertexData.len div vaNumValues
   glBindVertexArray(self.mesh.vao)
@@ -335,9 +320,10 @@ proc render*(self: UserInterface) =
       chunkMesh.build
 
     glBindVertexArray(chunkMesh.mesh.vao)
-    let playerHeadHeight = self.gameEngine.playerSurface.walkHeight.get + 1.8f
-    let offset = vec3(0.5f, 0.5f, playerHeadHeight)
-    var relativePosition = position - self.gameEngine.playerPosition - offset
+    let walkPosition = (self.gameEngine.playerSurface.walkPosition.get +
+                        self.gameEngine.playerChunk.position)
+    let headPosition = walkPosition + vec3(0f, 0f, 1.8f)
+    var relativePosition = position - headPosition
     var modelTransform = mat4(1f).translate(relativePosition)
     glUniformMatrix4fv(self.modelMatrixLocation, 1, false, modelTransform.caddr)
     glDrawArrays(GL_TRIANGLES, 0, chunkMesh.mesh.vertexCount.GLsizei)
