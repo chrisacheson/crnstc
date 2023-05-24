@@ -1,10 +1,9 @@
 import std/[
   algorithm,
+  bitops,
   math,
   monotimes,
   options,
-  sequtils,
-  sets,
   strformat,
   tables,
 ]
@@ -22,22 +21,120 @@ const
   cellMidpoint = vec3(0.5f, 0.5f, 0.5f)
   maxWalkableIncline = PI / 4
 
-const (cubeCorners, cubeEdges) = block:
-  var
-    corners: Table[Vec3[int], seq[Vec3[int]]]
-    edges = newSeqOfCap[(Vec3[int], Vec3[int])](12)
-  for x in 0..1:
-    for y in 0..1:
-      for z in 0..1:
-        corners[vec3(x, y, z)] = newSeqOfCap[Vec3[int]](3)
-  for corner in corners.keys:
-    for other in corners.keys:
-      for axis in [vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)]:
-        if corner + axis == other:
-          corners[corner].add(other)
-          corners[other].add(corner)
-          edges.add((corner, other))
-  (corners, edges)
+type Word = range[0b0000'u8..0b1111'u8]
+
+proc packWords(high, low: Word): byte =
+  result = (high shl 4) or low
+
+proc unpackWords(b: byte): tuple[high, low: Word] =
+  result.high = b shr 4
+  result.low = b and 0b0000_1111'u8
+
+# All 256 possible combinations of positive/negative cube corners, with their
+# respective sets of edge intersection connections
+const marchingCubesPermutations = block:
+  var permutations: array[low(byte)..high(byte), seq[seq[byte]]]
+  for permutation in low(byte)..high(byte):
+    # Each permutation is a sef of 8 bits, one bit per corner of the cube. 1s
+    # are corners with positive noise values, 0s are corners with negative
+    # noise values.
+    var directedEdges: seq[byte]
+    for corner in 0b000'u8..0b111:
+      # The index of each corner (0 through 7) is treated as a vector of 3
+      # bits, arranged 0b_xyz, giving the position of the corner
+      for flip in [0b001'u8, 0b010, 0b100]:
+        # Neighbors of a corner can be found by doing a single flip on each
+        # of the corner's 3 bits
+        let neighbor = corner xor flip
+        if permutation.testBit(corner) and not permutation.testBit(neighbor):
+          # Edges are stored as single bytes, arranged 0b0xyz_0xyz. The high
+          # word is set to the position of the positive corner and the low word
+          # is set to the position of the negative corner.
+          directedEdges.add(packWords(corner, neighbor))
+
+    directedEdges.sort
+    while directedEdges.len > 0:
+      assert directedEdges.len >= 3
+      # Arrange the edges into sets connected edges, one for each surface that
+      # will be created
+      var connectedEdges = @[directedEdges[0]]
+      directedEdges.delete(0)
+      var doLoop = true
+      while doLoop:
+        # With the edge vector (from positive corner to negative corner)
+        # pointing up, find the corners of its righthand face
+        #
+        # +---------+. 
+        # |`.   ^     `.
+        # |  `. |       `.
+        # |    `|---------+
+        # |left |         |
+        # |face |  right  |
+        # +     |  face   |
+        #  `.   |         |
+        #    `. |         |
+        #      `|---------+
+        #       |
+        #     vector
+        #
+        let (lowerLeftCorner, upperLeftCorner) = connectedEdges[^1].unpackWords
+
+        var axis = countTrailingZeroBits(lowerLeftCorner xor upperLeftCorner)
+        if lowerLeftCorner.parityBits == 0:
+          # Rotate right
+          axis -= 1
+        else:
+          # Rotate left
+          axis += 1
+        axis = axis.floorMod(3)
+
+        var lowerRightCorner = lowerLeftCorner
+        lowerRightCorner.flipBit(axis)
+        var upperRightCorner = upperLeftCorner
+        upperRightCorner.flipBit(axis)
+
+        # Bit set of corners included in this face
+        var faceCorners = byte.low
+        faceCorners.setBits(lowerLeftCorner.byte, upperLeftCorner.byte,
+                            lowerRightCorner.byte, upperRightCorner.byte)
+
+        for i, candidate in directedEdges:
+          # Check each remaining edge to find a valid connection
+          let (posCorner, negCorner) = candidate.unpackWords
+          if (
+            # n<--p
+            # ^
+            # |
+            # p   ?
+            (posCorner == upperRightCorner and negCorner == upperLeftCorner) or
+            # n   n
+            # ^   ^
+            # |   |
+            # p   p
+            (posCorner == lowerRightCorner and negCorner == upperRightCorner) or
+            # n   n
+            # ^
+            # |
+            # p-->n
+            (posCorner == lowerLeftCorner and negCorner == lowerRightCorner and
+             not permutation.testBit(upperRightCorner.byte))
+          ):
+            connectedEdges.add(candidate)
+            directedEdges.delete(i)
+            if directedEdges.len == 0:
+              # No ungrouped edges remaining
+              doLoop = false
+            break
+
+          elif i == directedEdges.high:
+            # None of the remaining ungrouped edges are valid for this set,
+            # start a new set
+            doLoop = false
+
+      assert connectedEdges.len >= 3
+      permutations[permutation].add(connectedEdges)
+
+  permutations
 
 type TerrainSurface* = ref object
   vertices*: seq[Vec3[float32]]
@@ -76,142 +173,86 @@ proc newChunk(position: Vec3[int]): Chunk =
         noise -= float32(z + z0)
         cornerNoise[x][y][z] = noise
 
-  var cubeEdgeIntersections: Table[(Vec3[int], Vec3[int]), Vec3[float32]]
-  var unvisited: HashSet[Vec3[int]]
-  var visitNext: seq[Vec3[int]]
   for x in 0..<chunkSize:
     for y in 0..<chunkSize:
       for z in 0..<chunkSize:
-        var intersectionCount = 0
-        cubeEdgeIntersections.clear
-        for edge in cubeEdges:
+        var permutation: byte
+        for bit in 0b000'u8..0b111:
+          # Check noise values at each corner of the current cell to determine
+          # which marching cubes permutation applies
           let
-            (corner0, corner1) = edge
-            cnoise0 = cornerNoise[x+corner0.x][y+corner0.y][z+corner0.z]
-            cnoise1 = cornerNoise[x+corner1.x][y+corner1.y][z+corner1.z]
-            product = cnoise0 * cnoise1
+            nx = x + bit.testBit(2).int
+            ny = y + bit.testBit(1).int
+            nz = z + bit.testBit(0).int
+            noise = cornerNoise[nx][ny][nz]
+          if noise >= 0f:
+            permutation.setBit(bit)
 
-          if product > 0f:
-            continue
-          elif product == 0f:
-            echo(&"Cell at {position + vec3(x, y, z)}",
-                 " has corner with 0 noise value, skipping")
-            break
+        let
+          edgeConnections = marchingCubesPermutations[permutation]
+          cell = vec3(x, y, z)
+        if edgeConnections.len > 0:
+          result.terrainSurfaces[cell] = @[]
 
-          var intersectionPosition: Vec3[float32]
-          for i in 0..<3:
-            if corner0[i] == corner1[i]:
-              intersectionPosition[i] = corner0[i].float32
-            else:
-              intersectionPosition[i] = cnoise0 / (cnoise0 - cnoise1)
-          cubeEdgeIntersections[edge] = intersectionPosition
-          intersectionCount += 1
+        for connectedEdgeSet in edgeConnections:
+          var surface = TerrainSurface()
+          for edge in connectedEdgeSet:
+            let
+              (posCorner, negCorner) = edge.unpackWords
+              pcx = posCorner.testBit(2).int
+              pcy = posCorner.testBit(1).int
+              pcz = posCorner.testBit(0).int
+              pcNoise = cornerNoise[x+pcx][y+pcy][z+pcz]
+              pcPosition = vec3(pcx, pcy, pcz)
+              ncx = negCorner.testBit(2).int
+              ncy = negCorner.testBit(1).int
+              ncz = negCorner.testBit(0).int
+              ncNoise = cornerNoise[x+ncx][y+ncy][z+ncz]
+              ncPosition = vec3(ncx, ncy, ncz)
+            # Interpolate between corner noise values to determine the point
+            # where the terrain surface should intersect the edge
+            var vertex = toFloat32(ncPosition - pcPosition)
+            vertex *= pcNoise / (pcNoise - ncNoise)
+            vertex += pcPosition
+            surface.vertices.add(vertex)
 
-        if intersectionCount == 0:
-          continue
-
-        let cell = vec3(x, y, z)
-        result.terrainSurfaces[cell] = @[]
-        unvisited.clear
-        for corner in cubeCorners.keys:
-          unvisited.incl(corner)
-        while unvisited.len > 0:
-          visitNext.add(unvisited.pop)
-          var verticesWithFakeNormals: seq[tuple[vertex: Vec3[float32],
-                                                 normal: Vec3[float32]]]
-          while visitNext.len > 0:
-            var corner = visitNext.pop
-            if cornerNoise[x+corner.x][y+corner.y][z+corner.z] < 0f:
-              continue
-            for neighbor in cubeCorners[corner]:
-              if cornerNoise[x+neighbor.x][y+neighbor.y][z+neighbor.z] < 0f:
-                let
-                  edge =
-                    if (corner.x > neighbor.x or
-                        corner.y > neighbor.y or
-                        corner.z > neighbor.z):
-                      (neighbor, corner)
-                    else:
-                      (corner, neighbor)
-                  vertex = cubeEdgeIntersections[edge]
-                  # Extremely approximate normal vector to the terrain surface
-                  fakeNormal = toFloat32(neighbor - corner)
-                verticesWithFakeNormals.add((vertex, fakeNormal))
-              elif neighbor in unvisited:
-                visitNext.add(neighbor)
-                unvisited.excl(neighbor)
-
-          if verticesWithFakeNormals.len > 0:
-            var (vertices, fakeNormals) = verticesWithFakeNormals.unzip
-
-            # Point roughly in the center of all the vertices
-            let midpoint = vertices.sum / vertices.len.float32
-            # Very approximate normal vector of the surface's front face, just
-            # for sorting the vertices into counterclockwise order
-            let mnormal = fakeNormals.sum.normalize
-
-            for vertex in vertices.mitems:
-              # Vertices relative to the midpoint
-              vertex -= midpoint
-              # Project the vertex vectors into the plane defined by midpoint
-              # and mnormal, and normalize them
-              vertex = vertex.cross(mnormal)
-              vertex = mnormal.cross(vertex).normalize
-
-            # Angles between first vector and each of the others
-            var thetas = newSeq[float32](vertices.len)
-            # Angle of first vector with itself is zero
-            thetas[0] = 0f
-            for i in 1..<len(vertices):
-              thetas[i] = vertices[0].dot(vertices[i]).clamp(-1f, 1f).arccos
-              # Cross product will point the opposite direction for reflex
-              # angles. The dot product of that vector with mnormal will be
-              # negative if it's pointing away.
-              if vertices[0].cross(vertices[i]).dot(mnormal) < 0f:
-                # 2*pi minus angle to get reflex angle
-                thetas[i] = 2 * PI - thetas[i]
-
-            # Order surface vertices counter-clockwise around mnormal
-            var (orderedVertices, _) = verticesWithFakeNormals.unzip
-            var verticesWithThetas = thetas.zip(orderedVertices)
-            verticesWithThetas.sort(
-              func (a, b: (float32, Vec3[float32])): int = cmp(a[0], b[0])
-            )
-            (thetas, orderedVertices) = verticesWithThetas.unzip
-
-            var actualNormal: Vec3[float32]
-            var numNormals = orderedVertices.len
+          let midpoint = surface.vertices.sum / surface.vertices.len.float32
+          var
+            sumNormals: Vec3f
+            numNormals = surface.vertices.len
+          if numNormals == 3:
             # For a triangle, the vertices are guaranteed to be coplanar, so we
             # don't need to take an average
-            if numNormals == 3:
-              numNormals = 1
+            numNormals = 1
 
-            for i in 0..<numNormals:
-              let vertexA = orderedVertices[i]
-              let vertexB = orderedVertices[floorMod(i+1, orderedVertices.len)]
-              let vectorMA = vertexA - midpoint
-              let vectorMB = vertexB - midpoint
-              actualNormal += vectorMA.cross(vectorMB)
+          for i in 0..<numNormals:
+            # Terrain surfaces with more than 3 vertices aren't actually flat,
+            # so calculate normals for each pair of adjacent vertices with the
+            # midpoint, and average them
+            let
+              vertexA = surface.vertices[i]
+              vertexB = surface.vertices[floorMod(i+1, surface.vertices.len)]
+              vectorMA = vertexA - midpoint
+              vectorMB = vertexB - midpoint
+            sumNormals += vectorMA.cross(vectorMB)
 
-            actualNormal = actualNormal.normalize
+          surface.normal = sumNormals.normalize
 
-            # Determine if the surface can be walked on, and its elevation
-            # within the cell
-            let normDotUp = actualNormal.dot(upVector).clamp(-1f, 1f)
-            let incline = normDotUp.arccos
-            var walkHeight: Option[float32]
-            if incline <= maxWalkableIncline:
-              let d = actualNormal.dot(midpoint - cellMidpoint) / normDotUp
-              let intersection = cellMidpoint + d * upVector
-              if intersection.z >= 0f and intersection.z <= 1f:
-                walkHeight = some(intersection.z)
+          # Determine if the surface can be walked on, and its elevation within
+          # the cell
+          #
+          # https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
+          let
+            normDotUp = surface.normal.dot(upVector).clamp(-1f, 1f)
+            incline = normDotUp.arccos
+          if incline <= maxWalkableIncline:
+            let
+              d = surface.normal.dot(midpoint - cellMidpoint) / normDotUp
+              intersection = cellMidpoint + d * upVector
+            if intersection.z >= 0f and intersection.z <= 1f:
+              surface.walkHeight = some(intersection.z)
 
-            var surface = TerrainSurface(
-              vertices: orderedVertices,
-              normal: actualNormal,
-              walkHeight: walkHeight,
-            )
-            result.terrainSurfaces[cell].add(surface)
+          result.terrainSurfaces[cell].add(surface)
 
   let endTime = getMonoTime()
   echo &"Chunk at {position} initialized in {endTime - beginTime}"
