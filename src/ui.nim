@@ -53,10 +53,10 @@ proc destroy(self: Mesh) =
   glDeleteBuffers(1, self.vbo.addr)
 
 type ChunkMesh = ref object
-  chunk: Chunk
+  chunk: OctreeNode[TerrainSurface]
   mesh: Mesh
 
-proc newChunkMesh(chunk: Chunk): ChunkMesh =
+proc newChunkMesh(chunk: OctreeNode[TerrainSurface]): ChunkMesh =
   ChunkMesh(chunk: chunk, mesh: newMesh())
 
 proc build(self: ChunkMesh) =
@@ -64,29 +64,29 @@ proc build(self: ChunkMesh) =
     walkableColor = vec3(0f, 1f, 0f)
     unwalkableColor = vec3(1f, 0f, 0f)
   self.mesh.vertexData.setLen(0)
-  for cell, cellSurfaces in self.chunk.terrainSurfaces:
-    for surface in cellSurfaces:
-      var color = if surface.walkHeight.isSome: walkableColor
-                  else: unwalkableColor
-      var vertices = surface.vertices
-      for vertex in vertices.mitems: vertex = vertex + cell
-      while vertices.len >= 3:
-        var upperVertexTextureCoordinateS = 0f
-        if vertices.len == 3:
-          upperVertexTextureCoordinateS = 1f
-        elif vertices.len < surface.vertices.len:
-          upperVertexTextureCoordinateS = 0.5
+  for surface in self.chunk:
+    var color = if surface.walkHeight.isSome: walkableColor
+                else: unwalkableColor
+    var vertices = surface.vertices
+    let referenceFrame = surface.position - self.chunk.position
+    for vertex in vertices.mitems: vertex = vertex + referenceFrame
+    while vertices.len >= 3:
+      var upperVertexTextureCoordinateS = 0f
+      if vertices.len == 3:
+        upperVertexTextureCoordinateS = 1f
+      elif vertices.len < surface.vertices.len:
+        upperVertexTextureCoordinateS = 0.5
 
-        self.mesh.vertexData.add(vertices[0].arr)
-        self.mesh.vertexData.add(color.arr)
-        self.mesh.vertexData.add([upperVertexTextureCoordinateS, 1f])
-        self.mesh.vertexData.add(vertices[1].arr)
-        self.mesh.vertexData.add(color.arr)
-        self.mesh.vertexData.add([0f, 0f])
-        self.mesh.vertexData.add(vertices[2].arr)
-        self.mesh.vertexData.add(color.arr)
-        self.mesh.vertexData.add([1f, 0f])
-        vertices.delete(1)
+      self.mesh.vertexData.add(vertices[0].arr)
+      self.mesh.vertexData.add(color.arr)
+      self.mesh.vertexData.add([upperVertexTextureCoordinateS, 1f])
+      self.mesh.vertexData.add(vertices[1].arr)
+      self.mesh.vertexData.add(color.arr)
+      self.mesh.vertexData.add([0f, 0f])
+      self.mesh.vertexData.add(vertices[2].arr)
+      self.mesh.vertexData.add(color.arr)
+      self.mesh.vertexData.add([1f, 0f])
+      vertices.delete(1)
 
   self.mesh.vertexCount = self.mesh.vertexData.len div vaNumValues
   glBindVertexArray(self.mesh.vao)
@@ -171,7 +171,7 @@ type UserInterface = ref object
   terrainTextureId: GLuint
   shaderProgramId: GLuint
   modelMatrixLocation: GLint
-  chunkMeshes: Table[Vec3[int], ChunkMesh]
+  chunkMeshes: Table[Vec3l, ChunkMesh]
   spriteSheet: SpriteSheet
   playerSprite: Sprite
 
@@ -289,9 +289,9 @@ proc newUserInterface*(gameEngine: GameEngine): UserInterface =
   result.playerSprite = result.spriteSheet.newSprite('@')
 
 const
-  northVector = vec3(0, 1, 0)
+  northVector = vec3l(0, 1, 0)
   southVector = -northVector
-  eastVector = vec3(1, 0, 0)
+  eastVector = vec3l(1, 0, 0)
   westVector = -eastVector
   northeastVector = northVector + eastVector
   southeastVector = southVector + eastVector
